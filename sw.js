@@ -1,5 +1,5 @@
 /* Offline support for the AI Career Lab site. Bump VERSION when you upload a new index.html to clear old copies. */
-const VERSION = "acl-v1";
+const VERSION = "acl-v2";
 const PAGE = VERSION + "-page", LIBS = "acl-libs-v1";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
@@ -12,6 +12,8 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET") return;
+  // Never cache the admin page or Google/Firebase sign-in pages.
+  if (url.pathname.endsWith("admin.html") || url.pathname.startsWith("/__/")) return;
   // The page itself: try the network first so updates show, fall back to the saved copy offline.
   if (req.mode === "navigate" || (url.origin === location.origin && /\/(index\.html)?$/.test(url.pathname))) {
     e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open(PAGE).then(c => c.put("./index.html", copy)); return r; })

@@ -42,6 +42,14 @@ td.wrap{white-space:normal;min-width:220px}
 .pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:var(--line)}
 .pill.g{background:rgba(95,211,141,.18);color:var(--ok)}.pill.r{background:rgba(255,123,123,.18);color:var(--bad)}
 .hide{display:none}
+.form{display:grid;gap:10px;text-align:left}
+.form label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
+.form input{font:inherit;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+button.lnk{border:0;background:none;color:var(--yel);padding:0;text-decoration:underline;font-weight:600}
+hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+details summary{cursor:pointer;font-weight:600}
+button.sm{padding:4px 10px;font-size:12.5px}
+button.danger{border-color:var(--bad);color:var(--bad)}
 </style>
 </head>
 <body>
@@ -56,17 +64,43 @@ td.wrap{white-space:normal;min-width:220px}
 <main>
   <!-- Sign-in screen -->
   <div id="signin" class="card center hide">
-    <h2>Admin dashboard</h2>
-    <p style="color:var(--mute)">Sign in with the admin Google account (aicareerlab077@gmail.com) to see your learners.</p>
-    <button class="main" id="google">Sign in with Google</button>
+    <h2>Admin login</h2>
+    <p style="color:var(--mute)">Use the email and password of an approved admin account.</p>
+    <form id="loginForm" class="form">
+      <label>Email (your username)<input id="lEmail" type="email" autocomplete="username" required></label>
+      <label>Password<input id="lPass" type="password" autocomplete="current-password" required></label>
+      <button class="main" type="submit">Sign in</button>
+      <button class="lnk" type="button" id="forgot">Forgot password?</button>
+    </form>
     <div class="msg" id="signinMsg"></div>
+    <hr>
+    <details><summary>New admin? Request access</summary>
+      <p style="color:var(--mute);font-size:13px">Create your admin login here. The main admin (aicareerlab077) must approve it before you can see learners.</p>
+      <form id="reqForm" class="form">
+        <label>Your name<input id="rName" required maxlength="80" autocomplete="name"></label>
+        <label>Your email<input id="rEmail" type="email" required autocomplete="email"></label>
+        <label>Choose a password (8+ characters, with a number)<input id="rPass" type="password" required minlength="8" autocomplete="new-password"></label>
+        <button type="submit">Request admin access</button>
+      </form>
+      <div class="msg" id="reqMsg"></div>
+    </details>
+    <hr>
+    <p style="font-size:13px;color:var(--mute)">Main admin only: <button class="lnk" type="button" id="google">Sign in with Google (aicareerlab077)</button></p>
+  </div>
+
+  <!-- Signed in but not (yet) an admin -->
+  <div id="pending" class="card center hide">
+    <h2 id="pTitle">Waiting for approval</h2>
+    <p style="color:var(--mute)" id="pText"></p>
+    <p><button id="pRequest" class="main hide">Request admin access</button> <button id="pCheck">Check again</button></p>
+    <div class="msg" id="pMsg"></div>
   </div>
 
   <!-- Admin email not verified yet -->
   <div id="verify" class="card center hide">
-    <h2>One step left: verify the admin email</h2>
+    <h2>One step left: verify your email</h2>
     <p style="color:var(--mute)">Firebase says <b id="vEmail"></b> is not verified yet, so the security rules hide learner data.
-      Click the button, open the email from Firebase in that Gmail inbox, click the link, then come back and press "I clicked the link".</p>
+      Click the button, open the email from Firebase in that inbox (check Spam too), click the link, then come back and press "I clicked the link".</p>
     <p><button class="main" id="sendV">Send verification email</button></p>
     <p><button id="checkV">I clicked the link, check again</button></p>
     <div class="msg" id="vMsg"></div>
@@ -74,6 +108,14 @@ td.wrap{white-space:normal;min-width:220px}
 
   <!-- Dashboard -->
   <div id="dash" class="hide">
+    <div class="card hide" id="adminsCard">
+      <h2>Admins (only you, the main admin, see this)</h2>
+      <h3 style="font-size:14px;color:var(--mute);margin:6px 0">Waiting for approval</h3>
+      <div class="tbl"><table id="reqTbl"><tbody></tbody></table></div>
+      <h3 style="font-size:14px;color:var(--mute);margin:14px 0 6px">Approved admins</h3>
+      <div class="tbl"><table id="admTbl"><tbody></tbody></table></div>
+      <div class="msg" id="admMsg"></div>
+    </div>
     <div class="kpis" id="kpis"></div>
     <div class="row">
       <div class="card"><h2>Active learners per day (last 30 days)</h2><div class="bars" id="actBars"></div><div class="axis" id="actAxis"></div></div>
@@ -119,7 +161,7 @@ var PY = [["s01-setup","01 Setup"],["s02-variables","02 Variables"],["s03-string
 var DATA = [["pd-create","Creating & Reading"],["pd-select","Selecting"],["pd-summary","Summary Functions"],["pd-group","Grouping & Sorting"],["pd-missing","Missing Values"],["pd-combine","Combining"],["ml-how","How Models Work"],["ml-explore","Data Exploration"],["ml-first","First ML Model"],["ml-validate","Validation"],["ml-fit","Under/Overfitting"],["ml-forest","Random Forests"]];
 
 function $(id){return document.getElementById(id)}
-function show(id){["signin","verify","dash"].forEach(function(x){$(x).classList.toggle("hide",x!==id)})}
+function show(id){["signin","pending","verify","dash"].forEach(function(x){$(x).classList.toggle("hide",x!==id)})}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function ts(v){return v&&v.toDate?v.toDate():null}
 function day(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -131,6 +173,11 @@ function nice(e){var c=(e&&e.code)||"";
   if(c.indexOf("unauthorized-domain")>=0)return "This web address is not allowed in Firebase. Add it in Firebase > Authentication > Settings > Authorized domains.";
   if(c.indexOf("permission-denied")>=0)return "Firebase rules said no (permission-denied).";
   if(c.indexOf("too-many-requests")>=0)return "Too many tries. Wait a few minutes and try again.";
+  if(/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c))return "Email or password is not right.";
+  if(c.indexOf("email-already-in-use")>=0)return "This email already has an account. Use the Admin login above with that password (or Forgot password).";
+  if(c.indexOf("weak-password")>=0||c.indexOf("password-does-not-meet")>=0)return "Use at least 8 characters with a number.";
+  if(c.indexOf("invalid-email")>=0)return "That email address doesn't look right.";
+  if(c.indexOf("operation-not-allowed")>=0)return "Turn on Email/Password in Firebase > Authentication > Sign-in method.";
   return (e&&e.message)||"Something went wrong.";}
 
 $("google").onclick=function(){
@@ -139,7 +186,7 @@ $("google").onclick=function(){
   auth.signInWithPopup(p).catch(function(e){$("signinMsg").className="msg bad";$("signinMsg").textContent=nice(e)});
 };
 $("out").onclick=function(){auth.signOut()};
-$("refresh").onclick=function(){load()};
+$("refresh").onclick=function(){load();if(IS_MAIN)loadAdmins()};
 $("sendV").onclick=function(){
   var u=auth.currentUser;if(!u)return;
   $("vMsg").className="msg";$("vMsg").textContent="Sending…";
@@ -153,18 +200,65 @@ $("checkV").onclick=function(){
    .catch(function(e){$("vMsg").className="msg bad";$("vMsg").textContent=nice(e)});
 };
 
+function msgTo(id,cls,t){$(id).className="msg "+(cls||"");$(id).textContent=t}
+$("loginForm").onsubmit=function(e){e.preventDefault();msgTo("signinMsg","","Signing in…");
+  auth.signInWithEmailAndPassword($("lEmail").value.trim(),$("lPass").value).catch(function(e){msgTo("signinMsg","bad",nice(e))})};
+$("forgot").onclick=function(){var em=$("lEmail").value.trim();if(!em)return msgTo("signinMsg","bad","Type your email first, then click Forgot password.");
+  auth.sendPasswordResetEmail(em).then(function(){msgTo("signinMsg","ok","If that email has an account, a reset link is on its way.")}).catch(function(e){msgTo("signinMsg","bad",nice(e))})};
+$("reqForm").onsubmit=function(e){e.preventDefault();var name=$("rName").value.trim(),em=$("rEmail").value.trim(),pw=$("rPass").value;
+  if(pw.length<8||!/\d/.test(pw))return msgTo("reqMsg","bad","Use at least 8 characters with a number.");
+  msgTo("reqMsg","","Creating your login…");window.__reqName=name;
+  auth.createUserWithEmailAndPassword(em,pw).then(function(c){return c.user.updateProfile({displayName:name}).then(function(){return c.user.sendEmailVerification()}).then(function(){return sendRequest(c.user,name)})})
+    .then(function(){msgTo("reqMsg","ok","Done. Check your email for a verification link, then ask the main admin to approve you.")})
+    .catch(function(e){msgTo("reqMsg","bad",nice(e))})};
+function sendRequest(u,name){return db.collection("adminRequests").doc(u.uid).set({name:(name||u.displayName||u.email).slice(0,80),email:u.email,at:firebase.firestore.FieldValue.serverTimestamp()})}
+$("pRequest").onclick=function(){var u=auth.currentUser;if(!u)return;msgTo("pMsg","","Sending request…");
+  sendRequest(u,u.displayName).then(function(){route(u)}).catch(function(e){msgTo("pMsg","bad",nice(e))})};
+$("pCheck").onclick=function(){var u=auth.currentUser;if(!u)return;msgTo("pMsg","","Checking…");
+  u.reload().then(function(){return u.getIdToken(true)}).then(function(){route(auth.currentUser)}).catch(function(e){msgTo("pMsg","bad",nice(e))})};
+
+var IS_MAIN=false;
 function route(u){
-  $("out").classList.toggle("hide",!u);$("refresh").classList.add("hide");
+  $("out").classList.toggle("hide",!u);$("refresh").classList.add("hide");$("adminsCard").classList.add("hide");
   $("who").textContent=u?u.email:"";
   if(!u){show("signin");return}
-  if((u.email||"").toLowerCase()!==ADMIN){
-    show("signin");$("signinMsg").className="msg bad";
-    $("signinMsg").textContent=u.email+" is not the admin account. Click Sign in with Google and choose "+ADMIN+".";
-    auth.signOut();return}
-  if(!u.emailVerified){show("verify");$("vEmail").textContent=u.email;
-    if(!$("vMsg").textContent)$("vMsg").textContent="";return}
-  show("dash");$("refresh").classList.remove("hide");load();
+  if(!u.emailVerified){show("verify");$("vEmail").textContent=u.email;return}
+  IS_MAIN=(u.email||"").toLowerCase()===ADMIN;
+  u.getIdToken(true).then(function(){
+    if(IS_MAIN)return "admin";
+    return db.collection("admins").doc(u.uid).get().then(function(d){
+      if(d.exists&&d.data().active===true)return "admin";
+      return db.collection("adminRequests").doc(u.uid).get().then(function(r){return r.exists?"waiting":"none"});
+    });
+  }).then(function(state){
+    if(state==="admin"){show("dash");$("refresh").classList.remove("hide");if(IS_MAIN){$("adminsCard").classList.remove("hide");loadAdmins()}load();return}
+    show("pending");msgTo("pMsg","","");
+    if(state==="waiting"){$("pTitle").textContent="Waiting for approval";$("pRequest").classList.add("hide");
+      $("pText").textContent="Your request for "+u.email+" has been sent. Ask the main admin (aicareerlab077) to open this admin page and click Approve. Then press Check again.";}
+    else{$("pTitle").textContent="This account is not an admin yet";$("pRequest").classList.remove("hide");
+      $("pText").textContent=u.email+" is signed in, but it isn't an approved admin. Send a request, and the main admin can approve it.";}
+  }).catch(function(e){show("pending");$("pTitle").textContent="Couldn't check your access";$("pText").textContent="";msgTo("pMsg","bad",nice(e)+" Make sure the latest firestore.rules are published.")});
 }
+function loadAdmins(){
+  db.collection("adminRequests").get().then(function(s){
+    var rows=s.docs.map(function(d){var x=d.data();x.uid=d.id;return x});
+    $("reqTbl").tBodies[0].innerHTML=rows.length?'<tr><th>Name</th><th>Email</th><th>Asked</th><th></th></tr>'+rows.map(function(r){
+      return "<tr><td>"+esc(r.name)+"</td><td>"+esc(r.email)+"</td><td>"+fmt(ts(r.at))+"</td><td><button class='sm main' data-ok='"+esc(r.uid)+"'>Approve</button> <button class='sm danger' data-no='"+esc(r.uid)+"'>Reject</button></td></tr>"}).join(""):'<tr><td>No requests right now.</td></tr>';
+    $("reqTbl").querySelectorAll("[data-ok]").forEach(function(b){b.onclick=function(){var r=rows.find(function(x){return x.uid===b.dataset.ok});
+      if(!confirmBox("Approve "+r.email+" as an admin? They will see all learner data."))return;
+      var batch=db.batch();batch.set(db.collection("admins").doc(r.uid),{name:r.name||"",email:r.email,active:true,addedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      batch.delete(db.collection("adminRequests").doc(r.uid));batch.commit().then(loadAdmins).catch(function(e){msgTo("admMsg","bad",nice(e))})}});
+    $("reqTbl").querySelectorAll("[data-no]").forEach(function(b){b.onclick=function(){db.collection("adminRequests").doc(b.dataset.no).delete().then(loadAdmins).catch(function(e){msgTo("admMsg","bad",nice(e))})}});
+  }).catch(function(e){msgTo("admMsg","bad","Requests: "+nice(e))});
+  db.collection("admins").get().then(function(s){
+    var rows=s.docs.map(function(d){var x=d.data();x.uid=d.id;return x});
+    $("admTbl").tBodies[0].innerHTML='<tr><th>Name</th><th>Email</th><th>Added</th><th></th></tr><tr><td>Main admin</td><td>'+ADMIN+'</td><td>-</td><td></td></tr>'+rows.map(function(r){
+      return "<tr><td>"+esc(r.name)+"</td><td>"+esc(r.email)+"</td><td>"+fmt(ts(r.addedAt))+"</td><td><button class='sm danger' data-rm='"+esc(r.uid)+"'>Remove</button></td></tr>"}).join("");
+    $("admTbl").querySelectorAll("[data-rm]").forEach(function(b){b.onclick=function(){if(!confirmBox("Remove this admin? They will lose access right away."))return;
+      db.collection("admins").doc(b.dataset.rm).delete().then(loadAdmins).catch(function(e){msgTo("admMsg","bad",nice(e))})}});
+  }).catch(function(e){msgTo("admMsg","bad","Admins: "+nice(e))});
+}
+function confirmBox(t){return window.confirm(t)}
 auth.onAuthStateChanged(route);
 
 var USERS=[],sortKey="last",sortDir=-1;
@@ -177,7 +271,11 @@ function load(){
         daysMap:x.days||{},days:Object.keys(x.days||{}).length,last:ts(x.lastSeen),joined:ts(x.createdAt)}});
     $("usersMsg").textContent=USERS.length?"":"No learners yet.";
     render();
-  }).catch(function(e){$("usersMsg").className="msg bad";$("usersMsg").textContent="Could not load learners: "+nice(e)});
+  }).catch(function(e){
+    if(!window.__retried&&String(e&&e.code).indexOf("permission-denied")>=0&&auth.currentUser){
+      window.__retried=true;$("usersMsg").textContent="Refreshing your sign-in and trying again…";
+      return auth.currentUser.reload().then(function(){return auth.currentUser.getIdToken(true)}).then(function(){setTimeout(load,800)});}
+    $("usersMsg").className="msg bad";$("usersMsg").textContent="Could not load learners: "+nice(e)+" Try: Sign out, then Sign in with Google again.";});
   db.collection("certificates").get().then(function(s){
     var rows=s.docs.map(function(d){return d.data()}).sort(function(a,b){return String(b.issued).localeCompare(String(a.issued))});
     $("certs").tBodies[0].innerHTML='<tr><th>ID</th><th>Name</th><th>Course</th><th>Score</th><th>Issued</th><th>Status</th></tr>'+

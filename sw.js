@@ -1,5 +1,5 @@
 /* Offline support for the AI Career Lab site. Bump VERSION when you upload a new index.html to clear old copies. */
-const VERSION = "acl-v2";
+const VERSION = "acl-v3";
 const PAGE = VERSION + "-page", LIBS = "acl-libs-v1";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 

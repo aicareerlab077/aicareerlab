@@ -1,50 +1,137 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Change this to the Google email you use to open admin.html.
-    function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'aicareerlab124@gmail.com'
+    // AI Career Lab security rules (15 Nov 2026, with approved admins). Paste all of this into Firebase > Firestore > Rules > Publish.
+
+    function signedIn() { return request.auth != null; }
+    // Email + password accounts must click the link in their verification email first. Google accounts are already verified.
+    function verified() {
+      return signedIn() && (request.auth.token.email_verified == true
+        || request.auth.token.firebase.sign_in_provider != 'password');
+    }
+    // The main admin: aicareerlab077@gmail.com. Only this account can approve or remove other admins.
+    function isMainAdmin() {
+      return signedIn() && request.auth.token.email == 'aicareerlab077@gmail.com'
         && request.auth.token.email_verified == true;
     }
-    // Each learner can read and write only their own progress. The admin can read everyone's.
+    // Any admin: the main admin, or a verified account the main admin approved (a document in admins/ with active: true).
+    function isAdmin() {
+      return isMainAdmin() || (signedIn() && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true);
+    }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function shortText(v, max) { return v is string && v.size() <= max; }
+
+    // The only fields the site saves for a learner, with size limits so nobody can stuff the database with junk.
+    function goodUser(d) {
+      return d.keys().hasOnly(['name', 'email', 'firstName', 'lastName', 'done', 'best', 'quiz', 'days',
+                               'topicsDone', 'lastSeen', 'createdAt', 'photo'])
+        && (!('name' in d) || shortText(d.name, 120))
+        && (!('email' in d) || shortText(d.email, 200))
+        && (!('firstName' in d) || shortText(d.firstName, 60))
+        && (!('lastName' in d) || shortText(d.lastName, 60))
+        && (!('photo' in d) || shortText(d.photo, 300000))
+        && (!('done' in d) || (d.done is map && d.done.size() <= 2000))
+        && (!('best' in d) || (d.best is map && d.best.size() <= 100))
+        && (!('quiz' in d) || (d.quiz is map && d.quiz.size() <= 2000))
+        && (!('days' in d) || (d.days is map && d.days.size() <= 400))
+        && (!('topicsDone' in d) || (d.topicsDone is int && d.topicsDone >= 0 && d.topicsDone <= 2000))
+        && (!('lastSeen' in d) || d.lastSeen is timestamp)
+        && (!('createdAt' in d) || d.createdAt is timestamp);
+    }
+    // Speed limit: progress can be saved at most once every 2 seconds per learner.
+    function notTooFast() {
+      return !('lastSeen' in resource.data) || !('lastSeen' in request.resource.data)
+        || request.resource.data.lastSeen == resource.data.lastSeen
+        || request.time > resource.data.lastSeen + duration.value(2, 's');
+    }
+    // Saved exam scores must be whole numbers from 0 to 100.
+    function scoreOk(d, key) { return !('best' in d) || !(key in d.best) || (d.best[key] is int && d.best[key] >= 0 && d.best[key] <= 100); }
+
     // Email sign-ups for new lessons: anyone can add their email once; only the admin can read the list.
+    // A signed-in learner can remove their own email (Delete my account).
     match /subscribers/{id} {
       allow create: if request.resource.data.keys().hasOnly(['email', 'at'])
-        && request.resource.data.email is string && request.resource.data.email.size() < 200;
+        && shortText(request.resource.data.email, 200)
+        && request.resource.data.email.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$')
+        && request.resource.data.at == request.time;
       allow read: if isAdmin();
+      allow delete: if isAdmin() || (verified() && request.auth.token.email == resource.data.email);
     }
-    // Feedback from the About page: anyone can send; only the admin can read.
+
+    // Feedback from the About page: anyone can send; only the admin can read all of it.
+    // A learner can find and delete their own feedback (Delete my account).
     match /feedback/{id} {
       allow create: if request.resource.data.keys().hasOnly(['rating', 'text', 'name', 'canShow', 'uid', 'email', 'at'])
-        && request.resource.data.text is string && request.resource.data.text.size() <= 600
-        && request.resource.data.rating is int && request.resource.data.rating >= 0 && request.resource.data.rating <= 5;
-      allow read: if isAdmin();
+        && shortText(request.resource.data.text, 600)
+        && (!('name' in request.resource.data) || shortText(request.resource.data.name, 80))
+        && (!('email' in request.resource.data) || shortText(request.resource.data.email, 200))
+        && request.resource.data.rating is int && request.resource.data.rating >= 0 && request.resource.data.rating <= 5
+        && request.resource.data.at == request.time
+        && (request.resource.data.uid == '' || isOwner(request.resource.data.uid));
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
-    // Certificates: anyone can look one up by its ID (the verify page). A signed-in learner can create
+
+    // Certificates: anyone can look one up by its ID (the verify page). A verified learner can create
     // their own, once, only after their saved best exam score is 70% or more. Only the admin can list
-    // all of them, cancel one (revoked) or delete one.
+    // all of them or cancel one (revoked). The owner or the admin can delete one.
     match /certificates/{id} {
       allow get: if true;
       allow list: if isAdmin();
-      allow create: if request.auth != null
+      allow create: if verified()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.id == id
         && request.resource.data.keys().hasOnly(['id', 'uid', 'name', 'course', 'courseName', 'testKey', 'score', 'issued'])
         && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 60
+        && shortText(request.resource.data.courseName, 120) && shortText(request.resource.data.issued, 10)
         && ((request.resource.data.course == 'intro' && request.resource.data.testKey == 'python')
           || (request.resource.data.course == 'data' && request.resource.data.testKey == 'pandas-ml'))
         && request.resource.data.score is int && request.resource.data.score >= 70 && request.resource.data.score <= 100
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.best[request.resource.data.testKey] >= 70;
-      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revoked']);
-      allow delete: if isAdmin();
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revoked'])
+        && request.resource.data.revoked is bool;
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
+
+    // Each learner can read and change only their own progress. The admin can read everyone's.
     match /users/{uid} {
-      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow read: if isAdmin() || isOwner(uid);
+      allow create: if isOwner(uid) && verified() && goodUser(request.resource.data);
+      allow update: if isOwner(uid) && verified() && goodUser(request.resource.data) && notTooFast()
+        && scoreOk(request.resource.data, 'python') && scoreOk(request.resource.data, 'pandas-ml');
+      allow delete: if isOwner(uid);
       match /events/{eventId} {
-        allow read: if isAdmin();
-        allow create: if request.auth != null && request.auth.uid == uid;
+        allow read: if isAdmin() || isOwner(uid);
+        allow create: if isOwner(uid) && verified()
+          && request.resource.data.type is string && request.resource.data.type.size() <= 40
+          && request.resource.data.keys().size() <= 12
+          && request.resource.data.at == request.time;
+        allow delete: if isOwner(uid);
       }
+    }
+    // Approved admins. Only the main admin can add, change or remove one. Each admin can read their own entry.
+    match /admins/{uid} {
+      allow read: if isMainAdmin() || isOwner(uid);
+      allow create, update, delete: if isMainAdmin();
+    }
+    // "Request admin access" from the admin page. The person can only ask for themselves, with their own sign-in email.
+    match /adminRequests/{uid} {
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['name', 'email', 'at'])
+        && shortText(request.resource.data.name, 80)
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.at == request.time;
+      allow read: if isMainAdmin() || isOwner(uid);
+      allow delete: if isMainAdmin() || isOwner(uid);
+    }
+    // Admin "Email learners" panel: who asked for no emails, when they were last emailed, and a send log. Admin only.
+    match /emailPrefs/{uid} {
+      allow read, write: if isAdmin();
+    }
+    match /emailLog/{id} {
+      allow read, create: if isAdmin();
     }
   }
 }

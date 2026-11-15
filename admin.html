@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin: AI Career Lab</title>
+<style>
+:root{--bg:#0d1a14;--card:#14261d;--line:#24402f;--ink:#eef3ee;--mute:#9fb5a7;--yel:#f5c518;--ok:#5fd38d;--bad:#ff7b7b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+.logo{width:34px;height:34px;border-radius:8px;border:1px solid var(--yel);color:var(--yel);display:grid;place-items:center;font-family:monospace;font-weight:700}
+header b{font-size:17px}header small{display:block;color:var(--mute);font-size:12px}
+.sp{flex:1}
+button,.btn{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 14px;font-weight:600}
+button.main{background:var(--yel);color:#14261d;border-color:var(--yel)}
+button:hover{border-color:var(--yel)}
+main{max-width:1200px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px}
+.center{max-width:440px;margin:60px auto;text-align:center}
+.msg{margin-top:12px;color:var(--mute)}.msg.bad{color:var(--bad)}.msg.ok{color:var(--ok)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.kpi .n{font-size:28px;font-weight:800;color:var(--yel)}.kpi .l{color:var(--mute);font-size:13px}
+h2{font-size:17px;margin:0 0 12px}
+.bars{display:flex;align-items:flex-end;gap:3px;height:140px;border-bottom:1px solid var(--line)}
+.bars div{flex:1;background:var(--yel);border-radius:3px 3px 0 0;min-height:1px;position:relative}
+.bars div:hover{background:#fff}
+.axis{display:flex;justify-content:space-between;color:var(--mute);font-size:12px;margin-top:4px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:800px){.row{grid-template-columns:1fr}}
+.fun{display:grid;grid-template-columns:minmax(120px,1.4fr) 3fr 40px;gap:8px;align-items:center;font-size:13px;margin:4px 0}
+.fun .t{height:12px;background:var(--line);border-radius:6px;overflow:hidden}.fun .t i{display:block;height:100%;background:var(--ok)}
+.tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+input[type=search]{font:inherit;flex:1;min-width:180px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mute);font-weight:600;cursor:pointer;user-select:none}
+td.wrap{white-space:normal;min-width:220px}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:var(--line)}
+.pill.g{background:rgba(95,211,141,.18);color:var(--ok)}.pill.r{background:rgba(255,123,123,.18);color:var(--bad)}
+.hide{display:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">&gt;_</div>
+  <div><b>AI Career Lab</b><small>Admin dashboard</small></div>
+  <div class="sp"></div>
+  <span id="who" style="color:var(--mute);font-size:13px"></span>
+  <button id="refresh" class="hide">Refresh</button>
+  <button id="out" class="hide">Sign out</button>
+</header>
+<main>
+  <!-- Sign-in screen -->
+  <div id="signin" class="card center hide">
+    <h2>Admin dashboard</h2>
+    <p style="color:var(--mute)">Sign in with the admin Google account (aicareerlab077@gmail.com) to see your learners.</p>
+    <button class="main" id="google">Sign in with Google</button>
+    <div class="msg" id="signinMsg"></div>
+  </div>
+
+  <!-- Admin email not verified yet -->
+  <div id="verify" class="card center hide">
+    <h2>One step left: verify the admin email</h2>
+    <p style="color:var(--mute)">Firebase says <b id="vEmail"></b> is not verified yet, so the security rules hide learner data.
+      Click the button, open the email from Firebase in that Gmail inbox, click the link, then come back and press "I clicked the link".</p>
+    <p><button class="main" id="sendV">Send verification email</button></p>
+    <p><button id="checkV">I clicked the link, check again</button></p>
+    <div class="msg" id="vMsg"></div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dash" class="hide">
+    <div class="kpis" id="kpis"></div>
+    <div class="row">
+      <div class="card"><h2>Active learners per day (last 30 days)</h2><div class="bars" id="actBars"></div><div class="axis" id="actAxis"></div></div>
+      <div class="card"><h2>New sign-ups per day (last 30 days)</h2><div class="bars" id="newBars"></div><div class="axis" id="newAxis"></div></div>
+    </div>
+    <div class="row">
+      <div class="card"><h2>Python: learners who finished each lesson</h2><div id="funPy"></div></div>
+      <div class="card"><h2>Pandas &amp; ML: learners who finished each lesson</h2><div id="funData"></div></div>
+    </div>
+    <div class="card">
+      <h2>Learners</h2>
+      <div class="tools"><input type="search" id="q" placeholder="Search name or email"><button id="csv">Download CSV</button></div>
+      <div class="tbl"><table id="tbl"><thead><tr>
+        <th data-k="name">Name</th><th data-k="email">Email</th><th data-k="done">Lessons done</th>
+        <th data-k="py">Python exam</th><th data-k="pd">Pandas &amp; ML exam</th><th data-k="days">Days active</th>
+        <th data-k="last">Last seen</th><th data-k="joined">Joined</th></tr></thead><tbody></tbody></table></div>
+      <div class="msg" id="usersMsg"></div>
+    </div>
+    <div class="row">
+      <div class="card"><h2>Certificates</h2><div class="tbl"><table id="certs"><tbody></tbody></table></div><div class="msg" id="certMsg"></div></div>
+      <div class="card"><h2>Feedback</h2><div class="tbl"><table id="fb"><tbody></tbody></table></div><div class="msg" id="fbMsg"></div></div>
+    </div>
+    <div class="card"><h2>Email sign-ups</h2><div class="tbl"><table id="subs"><tbody></tbody></table></div><div class="msg" id="subMsg"></div></div>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+var ADMIN = "aicareerlab077@gmail.com";
+firebase.initializeApp({
+  apiKey: "AIzaSyAF6zejf8WgsnEwSk8dk1XW3mymUMMXYes",
+  authDomain: "aicareerlab-8ba92.firebaseapp.com",
+  projectId: "aicareerlab-8ba92",
+  storageBucket: "aicareerlab-8ba92.firebasestorage.app",
+  messagingSenderId: "784359450634",
+  appId: "1:784359450634:web:eca670bce4b961d3b1d7f3"
+});
+var auth = firebase.auth(), db = firebase.firestore();
+var PY = [["s01-setup","01 Setup"],["s02-variables","02 Variables"],["s03-strings","03 Strings"],["s04-conditions","04 Conditions"],["s05-collections","05 Collections"],["s06-loops","06 Loops"],["s07-functions","07 Functions"],["p1-expense-tracker","P1 Expense Tracker"],["s08-typehints","08 Type Hints"],["s09-errors","09 Errors"],["s10-files","10 Files & JSON"],["s11-stdlib","11 Standard Library"],["s12-modules","12 Modules"],["s13-classes","13 Classes"],["p2-expense-tracker-pro","P2 Expense Tracker Pro"]];
+var DATA = [["pd-create","Creating & Reading"],["pd-select","Selecting"],["pd-summary","Summary Functions"],["pd-group","Grouping & Sorting"],["pd-missing","Missing Values"],["pd-combine","Combining"],["ml-how","How Models Work"],["ml-explore","Data Exploration"],["ml-first","First ML Model"],["ml-validate","Validation"],["ml-fit","Under/Overfitting"],["ml-forest","Random Forests"]];
+
+function $(id){return document.getElementById(id)}
+function show(id){["signin","verify","dash"].forEach(function(x){$(x).classList.toggle("hide",x!==id)})}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function ts(v){return v&&v.toDate?v.toDate():null}
+function day(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function fmt(d){return d?d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}):"-"}
+function ago(d){if(!d)return "-";var m=(Date.now()-d)/6e4;if(m<60)return Math.max(1,Math.round(m))+" min ago";if(m<1440)return Math.round(m/60)+" h ago";return Math.round(m/1440)+" days ago"}
+function nice(e){var c=(e&&e.code)||"";
+  if(c.indexOf("popup-blocked")>=0)return "The browser blocked the sign-in window. Allow pop-ups for this site and try again.";
+  if(c.indexOf("popup-closed")>=0||c.indexOf("cancelled-popup")>=0)return "The sign-in window was closed. Try again.";
+  if(c.indexOf("unauthorized-domain")>=0)return "This web address is not allowed in Firebase. Add it in Firebase > Authentication > Settings > Authorized domains.";
+  if(c.indexOf("permission-denied")>=0)return "Firebase rules said no (permission-denied).";
+  if(c.indexOf("too-many-requests")>=0)return "Too many tries. Wait a few minutes and try again.";
+  return (e&&e.message)||"Something went wrong.";}
+
+$("google").onclick=function(){
+  $("signinMsg").className="msg";$("signinMsg").textContent="Opening Google…";
+  var p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account",login_hint:ADMIN});
+  auth.signInWithPopup(p).catch(function(e){$("signinMsg").className="msg bad";$("signinMsg").textContent=nice(e)});
+};
+$("out").onclick=function(){auth.signOut()};
+$("refresh").onclick=function(){load()};
+$("sendV").onclick=function(){
+  var u=auth.currentUser;if(!u)return;
+  $("vMsg").className="msg";$("vMsg").textContent="Sending…";
+  u.sendEmailVerification().then(function(){$("vMsg").className="msg ok";$("vMsg").textContent="Sent to "+u.email+". Check the inbox (and Spam), click the link, then press the button below."})
+   .catch(function(e){$("vMsg").className="msg bad";$("vMsg").textContent=nice(e)});
+};
+$("checkV").onclick=function(){
+  var u=auth.currentUser;if(!u)return;
+  $("vMsg").className="msg";$("vMsg").textContent="Checking…";
+  u.reload().then(function(){return u.getIdToken(true)}).then(function(){route(auth.currentUser)})
+   .catch(function(e){$("vMsg").className="msg bad";$("vMsg").textContent=nice(e)});
+};
+
+function route(u){
+  $("out").classList.toggle("hide",!u);$("refresh").classList.add("hide");
+  $("who").textContent=u?u.email:"";
+  if(!u){show("signin");return}
+  if((u.email||"").toLowerCase()!==ADMIN){
+    show("signin");$("signinMsg").className="msg bad";
+    $("signinMsg").textContent=u.email+" is not the admin account. Click Sign in with Google and choose "+ADMIN+".";
+    auth.signOut();return}
+  if(!u.emailVerified){show("verify");$("vEmail").textContent=u.email;
+    if(!$("vMsg").textContent)$("vMsg").textContent="";return}
+  show("dash");$("refresh").classList.remove("hide");load();
+}
+auth.onAuthStateChanged(route);
+
+var USERS=[],sortKey="last",sortDir=-1;
+function load(){
+  $("usersMsg").className="msg";$("usersMsg").textContent="Loading learners…";
+  db.collection("users").get().then(function(snap){
+    USERS=snap.docs.map(function(d){var x=d.data()||{};var done=x.done||{},best=x.best||{};
+      return {uid:d.id,name:((x.firstName||"")+" "+(x.lastName||"")).trim()||x.name||"",email:x.email||"",
+        doneMap:done,done:Object.keys(done).length,py:best.python!=null?best.python:null,pd:best["pandas-ml"]!=null?best["pandas-ml"]:null,
+        daysMap:x.days||{},days:Object.keys(x.days||{}).length,last:ts(x.lastSeen),joined:ts(x.createdAt)}});
+    $("usersMsg").textContent=USERS.length?"":"No learners yet.";
+    render();
+  }).catch(function(e){$("usersMsg").className="msg bad";$("usersMsg").textContent="Could not load learners: "+nice(e)});
+  db.collection("certificates").get().then(function(s){
+    var rows=s.docs.map(function(d){return d.data()}).sort(function(a,b){return String(b.issued).localeCompare(String(a.issued))});
+    $("certs").tBodies[0].innerHTML='<tr><th>ID</th><th>Name</th><th>Course</th><th>Score</th><th>Issued</th><th>Status</th></tr>'+
+      (rows.map(function(c){return "<tr><td>"+esc(c.id)+"</td><td>"+esc(c.name)+"</td><td>"+esc(c.courseName||c.course)+"</td><td>"+esc(c.score)+"%</td><td>"+esc(c.issued)+"</td><td>"+(c.revoked?'<span class="pill r">cancelled</span>':'<span class="pill g">valid</span>')+"</td></tr>"}).join("")||'<tr><td colspan="6">None yet.</td></tr>');
+    window.__certs=rows.length;kpis();
+  }).catch(function(e){$("certMsg").className="msg bad";$("certMsg").textContent=nice(e)});
+  db.collection("feedback").get().then(function(s){
+    var rows=s.docs.map(function(d){return d.data()}).sort(function(a,b){return (ts(b.at)||0)-(ts(a.at)||0)});
+    $("fb").tBodies[0].innerHTML='<tr><th>When</th><th>Stars</th><th>From</th><th>Message</th></tr>'+
+      (rows.map(function(f){return "<tr><td>"+fmt(ts(f.at))+"</td><td>"+"★".repeat(f.rating||0)+"</td><td>"+esc(f.name||f.email||"-")+"</td><td class='wrap'>"+esc(f.text)+"</td></tr>"}).join("")||'<tr><td colspan="4">None yet.</td></tr>');
+  }).catch(function(e){$("fbMsg").className="msg bad";$("fbMsg").textContent=nice(e)});
+  db.collection("subscribers").get().then(function(s){
+    var rows=s.docs.map(function(d){return d.data()}).sort(function(a,b){return (ts(b.at)||0)-(ts(a.at)||0)});
+    window.__subs=rows.length;kpis();
+    $("subs").tBodies[0].innerHTML='<tr><th>Email</th><th>Signed up</th></tr>'+
+      (rows.map(function(r){return "<tr><td>"+esc(r.email)+"</td><td>"+fmt(ts(r.at))+"</td></tr>"}).join("")||'<tr><td colspan="2">None yet.</td></tr>');
+  }).catch(function(e){$("subMsg").className="msg bad";$("subMsg").textContent=nice(e)});
+}
+
+function kpis(){
+  var now=Date.now(),D=864e5;
+  var a1=USERS.filter(function(u){return u.last&&now-u.last<D}).length;
+  var a7=USERS.filter(function(u){return u.last&&now-u.last<7*D}).length;
+  var a30=USERS.filter(function(u){return u.last&&now-u.last<30*D}).length;
+  var n7=USERS.filter(function(u){return u.joined&&now-u.joined<7*D}).length;
+  var lessons=USERS.reduce(function(s,u){return s+u.done},0);
+  var started=USERS.filter(function(u){return u.done>0}).length;
+  var items=[[USERS.length,"Total learners"],[n7,"New this week"],[a1,"Active today"],[a7,"Active last 7 days"],[a30,"Active last 30 days"],
+    [started,"Finished 1+ lesson"],[lessons,"Lessons finished (all)"],[window.__certs==null?"…":window.__certs,"Certificates"],[window.__subs==null?"…":window.__subs,"Email sign-ups"]];
+  $("kpis").innerHTML=items.map(function(k){return '<div class="kpi"><div class="n">'+k[0]+'</div><div class="l">'+k[1]+'</div></div>'}).join("");
+}
+function bars(id,axis,counts){
+  var max=Math.max(1,Math.max.apply(null,counts.map(function(c){return c[1]})));
+  $(id).innerHTML=counts.map(function(c){return '<div title="'+c[0]+': '+c[1]+'" style="height:'+(c[1]/max*100)+'%"></div>'}).join("");
+  $(axis).innerHTML="<span>"+counts[0][0].slice(5)+"</span><span>max "+max+"</span><span>"+counts[counts.length-1][0].slice(5)+"</span>";
+}
+function funnel(id,list){
+  var max=Math.max(1,USERS.length);
+  $(id).innerHTML=list.map(function(l){var n=USERS.filter(function(u){return u.doneMap[l[0]]}).length;
+    return '<div class="fun"><span>'+esc(l[1])+'</span><span class="t"><i style="width:'+(n/max*100)+'%"></i></span><span>'+n+'</span></div>'}).join("");
+}
+function render(){
+  kpis();
+  var act=[],nw=[];
+  for(var i=29;i>=0;i--){var d=day(new Date(Date.now()-i*864e5));
+    act.push([d,USERS.filter(function(u){return u.daysMap[d]}).length]);
+    nw.push([d,USERS.filter(function(u){return u.joined&&day(u.joined)===d}).length]);}
+  bars("actBars","actAxis",act);bars("newBars","newAxis",nw);
+  funnel("funPy",PY);funnel("funData",DATA);
+  table();
+}
+function table(){
+  var q=$("q").value.trim().toLowerCase();
+  var rows=USERS.filter(function(u){return !q||(u.name+" "+u.email).toLowerCase().indexOf(q)>=0});
+  rows.sort(function(a,b){var x=a[sortKey],y=b[sortKey];if(x==null)x=-1;if(y==null)y=-1;if(x instanceof Date)x=+x;if(y instanceof Date)y=+y;
+    return (x>y?1:x<y?-1:0)*sortDir});
+  $("tbl").tBodies[0].innerHTML=rows.map(function(u){return "<tr><td>"+esc(u.name||"-")+"</td><td>"+esc(u.email)+"</td><td>"+u.done+"</td><td>"+(u.py==null?"-":u.py+"%")+"</td><td>"+(u.pd==null?"-":u.pd+"%")+"</td><td>"+u.days+"</td><td title='"+(u.last?u.last.toLocaleString():"")+"'>"+ago(u.last)+"</td><td>"+fmt(u.joined)+"</td></tr>"}).join("");
+}
+$("q").oninput=table;
+document.querySelectorAll("#tbl th").forEach(function(th){th.onclick=function(){var k=th.getAttribute("data-k");if(sortKey===k)sortDir=-sortDir;else{sortKey=k;sortDir=-1}table()}});
+$("csv").onclick=function(){
+  var head=["name","email","lessons_done","python_exam","pandas_ml_exam","days_active","last_seen","joined"];
+  var lines=[head.join(",")].concat(USERS.map(function(u){return [u.name,u.email,u.done,u.py==null?"":u.py,u.pd==null?"":u.pd,u.days,u.last?u.last.toISOString():"",u.joined?u.joined.toISOString():""]
+    .map(function(v){v=String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(",")}));
+  var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([lines.join("\n")],{type:"text/csv"}));a.download="learners-"+day(new Date())+".csv";a.click();
+};
+var idle;function poke(){clearTimeout(idle);idle=setTimeout(function(){if(auth.currentUser)auth.signOut()},30*60*1000)}
+["click","keydown","mousemove","touchstart"].forEach(function(e){addEventListener(e,poke,{passive:true})});poke();
+})();
+</script>
+</body>
+</html>

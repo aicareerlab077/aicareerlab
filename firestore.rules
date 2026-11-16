@@ -1,7 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // AI Career Lab security rules (15 Nov 2026, with approved admins). Paste all of this into Firebase > Firestore > Rules > Publish.
+    // AI Career Lab security rules, version 3 (16 Nov 2026): version 2 rules plus study plans and the email robot. Paste all of this into Firebase > Firestore > Rules > Publish.
 
     function signedIn() { return request.auth != null; }
     // Email + password accounts must click the link in their verification email first. Google accounts are already verified.
@@ -132,6 +132,41 @@ service cloud.firestore {
     }
     match /emailLog/{id} {
       allow read, create: if isAdmin();
+    }
+
+    // VERSION 3. Study plan: the days and time a learner says they will study each course (the reminder email uses it).
+    // Each learner reads and writes only their own plan. Admins can read all plans.
+    function goodPlan(d) {
+      return d.keys().hasOnly(['tz', 'courses', 'emails', 'lastOpen', 'updatedAt'])
+        && (!('tz' in d) || shortText(d.tz, 60))
+        && (!('courses' in d) || (d.courses is map && d.courses.size() <= 20))
+        && (!('emails' in d) || d.emails is bool)
+        && (!('lastOpen' in d) || d.lastOpen is timestamp)
+        && d.updatedAt == request.time;
+    }
+    match /studyPlans/{uid} {
+      allow read: if isAdmin() || isOwner(uid);
+      allow create, update: if isOwner(uid) && verified() && goodPlan(request.resource.data);
+      allow delete: if isOwner(uid);
+    }
+    // Email robot (the Gmail script in the aicareerlab077 account). The script uses the owner's Google login, so these
+    // rules don't limit it. Admins can read what it sent and switch emails on or off. Learners can't see any of it.
+    match /emailState/{uid} {
+      allow read: if isAdmin();
+    }
+    match /emailSettings/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /broadcasts/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['subject', 'body', 'by', 'at', 'status', 'testTo'])
+        && shortText(request.resource.data.subject, 150)
+        && shortText(request.resource.data.body, 5000)
+        && request.resource.data.status == 'queued'
+        && request.resource.data.at == request.time;
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status == 'cancelled';
     }
   }
 }

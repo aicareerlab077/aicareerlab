@@ -301,3 +301,135 @@ print(f"Chai bill: Rs {price * cups}")`;function b0(){rr();let e=uA(),t=mT(mA())
   soon();
 })();
 </script>
+
+<!-- VERSION 3: study plan. When a signed-in learner opens a lesson of a course for the first time, ask which days and
+     what time they will study. Saved in Firestore studyPlans/{uid}. The Gmail script (emails/Code.gs) sends one reminder
+     if they don't open the site within an hour of their time. -->
+<script type="application/json" id="study-courses">{"intro":{"name":"Python","lessons":[["s01-setup"],["s02-variables"],["s03-strings"],["s04-conditions"],["s05-collections"],["s06-loops"],["s07-functions"],["p1-expense-tracker"],["s08-typehints"],["s09-errors"],["s10-files"],["s11-stdlib"],["s12-modules"],["s13-classes"],["p2-expense-tracker-pro"]]},"data":{"name":"Pandas and Machine Learning","lessons":[["pd-create"],["pd-select"],["pd-summary"],["pd-group"],["pd-missing"],["pd-combine"],["ml-how"],["ml-explore"],["ml-first"],["ml-validate"],["ml-fit"],["ml-forest"]]},"sql":{"name":"SQL and Data Analytics","lessons":[["q01-basics"],["q02-queries"],["q03-groupby"],["q04-ddl-dml"],["q05-filters"],["q06-joins"],["q07-text-numbers"],["q08-dates-nulls-case"],["q09-window"],["q10-subqueries-ctes"],["q11-views-procs"],["q12-performance"],["q13-ai-copilot"],["qp1-data-audit"],["qp2-electronics"],["qp3-warehouse"]]},"viz":{"name":"Data Visualization Basics","lessons":[["v01-why-data-stories"],["v02-how-eyes-read-charts"],["v03-context-first"],["v04-pick-and-build-charts"],["v05-declutter-format"],["v06-focus-with-colour"],["v07-build-the-story"],["v08-case-studies-final"]]},"charts":{"name":"Python Charts, Next Level","lessons":[["pc01-three-tools"],["pc02-seaborn-one-line"],["pc03-compare-groups"],["pc04-relationships"],["pc05-heatmaps"],["pc06-small-multiples"],["pc07-plotly-basics"],["pc08-plotly-extras"],["pc09-part-to-whole"],["pc10-style-and-export"],["pc11-supermart-explorer"]]},"bi":{"name":"Dashboards Without Code (Power BI)","lessons":[["bi01-what-is-power-bi"],["bi02-load-data"],["bi03-clean-power-query"],["bi04-first-visuals"],["bi05-slicers-filters"],["bi06-measures"],["bi07-relationships"],["bi08-maps-kpis"],["bi09-design-dashboard"],["bi10-share-reports"],["bi11-metro-dashboard"]]},"ml":{"name":"Machine Learning Basics","lessons":[["m01-what-is-ml"],["m02-linear-regression"],["m03-measure-regression"],["m04-classification"],["m05-measure-classification"],["m06-more-classifiers"],["m07-clustering"],["m08-which-ml-type"],["m09-choose-a-model"]]},"models":{"name":"Machine Learning Models, One by One","lessons":[["mm01-recap"],["mm02-multiple-polynomial"],["mm03-naive-bayes"],["mm04-svm"],["mm05-random-forest"],["mm06-gradient-boosting"],["mm07-pca"],["mm08-dbscan-anomaly"],["mm09-recommendations"],["mm10-time-series"],["mm11-cheat-sheet"],["mm12-model-showdown"]]},"genai":{"name":"Generative AI with Python","lessons":[["g01-how-llms-work"],["g02-prompting"],["g03-apis-json"],["g04-embeddings"],["g05-rag"],["g06-agents"],["g07-evaluation"],["gp1-help-desk"]]}}</script>
+<style>
+.acl-sp-back{position:fixed;inset:0;z-index:80;background:rgba(3,10,7,.72);display:grid;place-items:center;padding:16px;animation:aclfade .2s ease-out}
+@keyframes aclfade{from{opacity:0}to{opacity:1}}
+.acl-sp{width:min(460px,100%);max-height:calc(100vh - 32px);overflow:auto;background:hsl(var(--code-bg));color:inherit;border:2px solid hsl(var(--marker));border-radius:1rem;padding:1.35rem 1.35rem 1.1rem;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.acl-sp h2{margin:0 0 .35rem;font-size:1.3rem;line-height:1.25;font-weight:800}
+.acl-sp p{margin:0 0 .9rem;opacity:.85;font-size:.93rem;line-height:1.5}
+.acl-sp .acl-sp-k{display:block;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;opacity:.7;margin:.2rem 0 .45rem;font-weight:700}
+.acl-days{display:grid;grid-template-columns:repeat(7,1fr);gap:.35rem;margin-bottom:1rem}
+.acl-day{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;padding:.55rem 0;border-radius:.55rem;border:1.5px solid hsl(var(--rule));font-weight:700;font-size:.85rem}
+.acl-day[aria-pressed=true]{background:hsl(var(--marker));border-color:hsl(var(--marker));color:#10241c}
+.acl-day:focus-visible,.acl-sp select:focus-visible,.acl-sp-btn:focus-visible{outline:2px solid hsl(var(--marker));outline-offset:2px}
+.acl-sp select{font:inherit;width:100%;padding:.6rem .7rem;border-radius:.55rem;border:1.5px solid hsl(var(--rule));background:transparent;color:inherit;margin-bottom:.9rem}
+.acl-sp select option{color:#111}
+.acl-sp label.acl-chk{display:flex;gap:.55rem;align-items:flex-start;font-size:.88rem;margin-bottom:1rem;cursor:pointer}
+.acl-sp label.acl-chk input{margin-top:.2rem;accent-color:hsl(var(--marker))}
+.acl-sp-row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+.acl-sp-btn{all:unset;box-sizing:border-box;cursor:pointer;padding:.65rem 1.1rem;border-radius:.6rem;font-weight:800;font-size:.95rem;border:1.5px solid hsl(var(--rule))}
+.acl-sp-btn.go{background:hsl(var(--marker));border-color:hsl(var(--marker));color:#10241c}
+.acl-sp-btn[disabled]{opacity:.5;cursor:default}
+.acl-sp-msg{font-size:.85rem;margin-top:.6rem;min-height:1.2em}
+.acl-sp-msg.bad{color:hsl(0 85% 70%)}
+.acl-sp small.acl-sp-tz{display:block;opacity:.65;font-size:.78rem;margin-top:.7rem}
+.acl-planbar{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.8rem;font-size:.85rem}
+.acl-planbar button{all:unset;cursor:pointer;padding:.3rem .7rem;border-radius:99px;border:1px solid hsl(var(--rule));font-weight:600}
+.acl-planbar button:hover{border-color:hsl(var(--marker))}
+.acl-planbar button:focus-visible{outline:2px solid hsl(var(--marker))}
+@media (prefers-reduced-motion:reduce){.acl-sp-back{animation:none}}
+</style>
+<script>
+/* AI Career Lab: study plan (version 3). */
+(function(){
+  var C={};try{C=JSON.parse(document.getElementById("study-courses").textContent)}catch(e){}
+  var LESSON={};Object.keys(C).forEach(function(c){C[c].lessons.forEach(function(l){LESSON[l[0]]=c})});
+  var DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]; /* stored as 1..7, Monday = 1 */
+  var plan=null,planUid=null,loading=null,asked={},lastOpenWrite=0;
+  function fb(){var f=window.firebase;return f&&f.apps&&f.apps.length?f:null}
+  function user(){var f=fb();if(!f)return null;var u=f.auth().currentUser;if(!u)return null;
+    var pw=(u.providerData||[]).every(function(p){return p.providerId==="password"});
+    return (u.emailVerified||!pw)?u:null}
+  function tz(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone||"Asia/Kolkata"}catch(e){return "Asia/Kolkata"}}
+  function key(){var h="";try{h=decodeURIComponent(location.hash.slice(1))}catch(e){}return h.replace(/-task$/,"")}
+  function ref(u){return fb().firestore().collection("studyPlans").doc(u.uid)}
+  function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e}
+  function nice(t){var p=String(t||"19:00").split(":"),h=+p[0],m=p[1]||"00";return (h%12||12)+":"+m+" "+(h<12?"AM":"PM")}
+  function load(u){
+    if(planUid===u.uid&&plan)return Promise.resolve(plan);
+    if(loading&&planUid===u.uid)return loading;
+    planUid=u.uid;
+    loading=ref(u).get().then(function(d){plan=d.exists?(d.data()||{}):{};plan.courses=plan.courses||{};return plan})
+      .catch(function(){plan=null;loading=null;return null});
+    return loading}
+  function save(u,course,entry){
+    var f=fb(),FV=f.firestore.FieldValue,upd={tz:tz(),updatedAt:FV.serverTimestamp(),lastOpen:FV.serverTimestamp()};
+    if(plan&&plan.emails===undefined)upd.emails=true;
+    if(entry.emails!==undefined){upd.emails=entry.emails;delete entry.emails}
+    var c={};c[course]=entry;upd.courses=c;
+    return ref(u).set(upd,{merge:true}).then(function(){
+      plan=plan||{courses:{}};plan.courses[course]=Object.assign({},plan.courses[course]||{},entry);plan.tz=upd.tz;if(upd.emails!==undefined)plan.emails=upd.emails;lastOpenWrite=Date.now()})}
+  function touch(u){
+    /* tells the reminder script "they studied", at most every 10 minutes */
+    if(Date.now()-lastOpenWrite<6e5||!plan)return;lastOpenWrite=Date.now();
+    var FV=fb().firestore.FieldValue;ref(u).set({lastOpen:FV.serverTimestamp(),updatedAt:FV.serverTimestamp(),tz:tz()},{merge:true}).catch(function(){})}
+  function modal(u,course,cur){
+    if(document.querySelector(".acl-sp-back"))return;
+    cur=cur||{};
+    var sel={};(cur.days||[]).forEach(function(d){sel[d]=1});
+    var back=el("div","acl-sp-back"),box=el("div","acl-sp");box.setAttribute("role","dialog");box.setAttribute("aria-modal","true");box.setAttribute("aria-labelledby","acl-sp-h");
+    var h=el("h2",null,"When will you study "+C[course].name+" this week?");h.id="acl-sp-h";box.appendChild(h);
+    box.appendChild(el("p",null,"Pick your days and a time. A fixed study time makes it much easier to keep going. If you miss it, we'll send you one friendly reminder email."));
+    box.appendChild(el("span","acl-sp-k","Days"));
+    var dd=el("div","acl-days");
+    DAYS.forEach(function(n,i){var b=el("button","acl-day",n);b.type="button";b.setAttribute("aria-pressed",!!sel[i+1]);
+      b.onclick=function(){if(sel[i+1])delete sel[i+1];else sel[i+1]=1;b.setAttribute("aria-pressed",!!sel[i+1]);go.disabled=!Object.keys(sel).length};dd.appendChild(b)});
+    box.appendChild(dd);
+    box.appendChild(el("span","acl-sp-k","Time"));
+    var s=el("select");s.setAttribute("aria-label","Study time");
+    for(var m=5*60;m<=23*60+30;m+=30){var v=String(Math.floor(m/60)).padStart(2,"0")+":"+(m%60?"30":"00");var o=el("option",null,nice(v));o.value=v;s.appendChild(o)}
+    s.value=cur.time||"19:00";box.appendChild(s);
+    var lab=el("label","acl-chk"),cb=el("input");cb.type="checkbox";cb.checked=!(plan&&plan.emails===false);
+    lab.appendChild(cb);lab.appendChild(el("span",null,"Email me a reminder if I miss my study time"));box.appendChild(lab);
+    var row=el("div","acl-sp-row"),go=el("button","acl-sp-btn go","Save my plan"),no=el("button","acl-sp-btn","Not now");go.type=no.type="button";
+    go.disabled=!Object.keys(sel).length;row.appendChild(go);row.appendChild(no);box.appendChild(row);
+    var msg=el("div","acl-sp-msg");box.appendChild(msg);
+    box.appendChild(el("small","acl-sp-tz","Times are in your time zone ("+tz()+"). You can change this any time from the study plan button at the top of each lesson."));
+    function close(){back.remove();document.removeEventListener("keydown",esc);paint()}
+    function esc(e){if(e.key==="Escape")no.click()}
+    go.onclick=function(){go.disabled=true;msg.className="acl-sp-msg";msg.textContent="Saving…";
+      var days=Object.keys(sel).map(Number).sort();
+      save(u,course,{days:days,time:s.value,skip:false,startedAt:cur.startedAt||fb().firestore.FieldValue.serverTimestamp(),emails:cb.checked})
+        .then(function(){msg.textContent="Saved. See you on "+days.map(function(d){return DAYS[d-1]}).join(", ")+" at "+nice(s.value)+"!";setTimeout(close,1300)})
+        .catch(function(){go.disabled=false;msg.className="acl-sp-msg bad";msg.textContent="Couldn't save right now. Please try again."})};
+    no.onclick=function(){
+      if(cur.startedAt||cur.days){close();return}
+      save(u,course,{skip:true,startedAt:fb().firestore.FieldValue.serverTimestamp()}).catch(function(){});close()};
+    back.addEventListener("click",function(e){if(e.target===back)no.click()});
+    document.addEventListener("keydown",esc);
+    back.appendChild(box);document.body.appendChild(back);
+    setTimeout(function(){(dd.firstChild||go).focus()},30)}
+  function paint(){
+    var k=key(),c=LESSON[k],u=user();
+    document.querySelectorAll(".acl-planbar").forEach(function(b){if(b.getAttribute("data-k")!==k||!u)b.remove()});
+    var art=document.querySelector("article.topic");
+    if(!c||!u||!plan||!art||!art.firstElementChild)return;
+    var head=art.firstElementChild,bar=head.querySelector(".acl-planbar");
+    var p=plan.courses[c]||{},txt=p.days&&p.days.length&&!p.skip?"🗓 Your study time: "+p.days.map(function(d){return DAYS[d-1]}).join(", ")+" at "+nice(p.time):"🗓 No study time set for this course";
+    if(bar&&bar.getAttribute("data-t")===txt)return;
+    if(bar)bar.remove();
+    bar=el("div","acl-planbar");bar.setAttribute("data-k",k);bar.setAttribute("data-t",txt);
+    bar.appendChild(el("span",null,txt));
+    var b=el("button",null,p.days&&p.days.length&&!p.skip?"Change":"Set a study time");b.type="button";b.onclick=function(){modal(u,c,p)};bar.appendChild(b);
+    head.appendChild(bar)}
+  function check(){
+    var k=key(),c=LESSON[k],u=user();
+    if(!c||!u){paint();return}
+    var art=document.querySelector("article.topic");
+    if(!art||!art.firstElementChild)return;
+    var locked=/Locked\./.test(art.firstElementChild.textContent);
+    load(u).then(function(p){
+      if(!p)return;touch(u);paint();
+      if(locked||p.courses[c]||asked[c])return;
+      asked[c]=1;setTimeout(function(){if(key()===k)modal(u,c,null)},1200)})}
+  var q=0;function soon(){if(q)return;q=setTimeout(function(){q=0;check()},250)}
+  window.addEventListener("hashchange",soon);
+  new MutationObserver(soon).observe(document.getElementById("root")||document.body,{childList:true,subtree:true});
+  (function wait(n){var f=fb();if(f){f.auth().onAuthStateChanged(function(u){if(!u||u.uid!==planUid){plan=null;loading=null;asked={}}soon()})}else if(n<120)setTimeout(function(){wait(n+1)},500)})(0);
+})();
+</script>

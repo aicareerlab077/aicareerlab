@@ -116,6 +116,140 @@ button.danger{border-color:var(--bad);color:var(--bad)}
       <div class="tbl"><table id="admTbl"><tbody></tbody></table></div>
       <div class="msg" id="admMsg"></div>
     </div>
+<style>
+/* phone fixes (version 3): header wraps, cards in a row may shrink */
+@media(max-width:600px){header{flex-wrap:wrap;padding:12px 16px}#who{display:none}}
+.row>.card{min-width:0}
+.em-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;margin-bottom:6px}
+.em-status{font-size:13.5px;color:var(--mute)}.em-status b{color:var(--ink)}
+.em-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:var(--mute);vertical-align:middle}
+.em-dot.g{background:var(--ok)}.em-dot.r{background:var(--bad)}
+.em-sw{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin:12px 0 4px}
+.em-sw label{display:flex;gap:10px;align-items:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:13.5px}
+.em-sw label input{margin-top:3px;accent-color:var(--yel);width:16px;height:16px;flex:none}
+.em-sw label small{display:block;color:var(--mute);font-size:12px;margin-top:2px}
+.em-form{display:grid;gap:8px;margin-top:6px}
+.em-form input,.em-form textarea{font:inherit;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+.em-form textarea{min-height:130px;resize:vertical;line-height:1.5}
+.em-hint{font-size:12.5px;color:var(--mute)}
+.em-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 10px}
+.em-tabs button[aria-selected=true]{border-color:var(--yel);color:var(--yel)}
+</style>
+<div class="card" id="emailsCard">
+  <div class="em-top"><h2 style="margin:0">Emails to learners</h2><span class="em-status" id="emStatus">Checking the email robot…</span></div>
+  <div class="em-sw" id="emSw">
+    <label><input type="checkbox" data-k="welcome"><span><b>Welcome email</b><small>Once, after someone signs up.</small></span></label>
+    <label><input type="checkbox" data-k="course"><span><b>Course email</b><small>Once per course, when a learner starts it.</small></span></label>
+    <label><input type="checkbox" data-k="study"><span><b>Study time reminder</b><small>If a learner misses the study time they picked.</small></span></label>
+    <label><input type="checkbox" data-k="version"><span><b>New version email</b><small>Sends the emails you write below.</small></span></label>
+    <label><input type="checkbox" data-k="missYou"><span><b>"We miss you" email</b><small>After 7 days away. Off to start with.</small></span></label>
+    <label><input type="checkbox" data-k="paused"><span><b>Pause all emails</b><small>Stops everything until you untick it.</small></span></label>
+  </div>
+  <div class="msg" id="emSwMsg"></div>
+  <hr>
+  <h2>Send a "new version" email to every learner</h2>
+  <div class="em-form">
+    <input id="emSubj" maxlength="150" value="New this week at AI Career Lab 🎉" aria-label="Subject">
+    <textarea id="emBody" maxlength="5000" aria-label="Message">Hi {first},
+
+This week's version of AI Career Lab is live! Here is what's new:
+
+- Pick your own study days and time for each course, and we'll remind you if you miss one.
+- More video lessons inside the courses.
+
+Open any lesson to try it.</textarea>
+    <div class="em-hint">{first} becomes each learner's first name. Leave an empty line between paragraphs. The email gets the AI Career Lab design, a button to the site and an unsubscribe link. Gmail allows about 100 emails a day, so a big list goes out over a few days.</div>
+    <div class="tools"><button id="emTest">Send a test to me</button><button class="main" id="emSend">Send to all learners</button></div>
+    <div class="msg" id="emMsg"></div>
+  </div>
+  <div class="em-tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-t="log">Sent emails</button>
+    <button role="tab" aria-selected="false" data-t="bc">New version emails</button>
+    <button role="tab" aria-selected="false" data-t="plans">Study plans</button>
+  </div>
+  <div class="tbl"><table id="emTbl"><tbody></tbody></table></div>
+  <div class="msg" id="emTblMsg"></div>
+</div>
+<script>
+/* AI Career Lab admin: Emails box (version 3). The Gmail script in the aicareerlab077 account does the sending. */
+window.ACLEmails=(function(){
+  var db,auth,FV,users=[],tab="log",cache={};
+  var COURSE={intro:"Python",data:"Pandas & ML",sql:"SQL",viz:"Data Viz Basics",charts:"Python Charts",bi:"Power BI",ml:"ML Basics",models:"ML Models",genai:"Generative AI"};
+  var TYPE={welcome:"Welcome",course:"Course",study:"Study reminder",version:"New version",missyou:"We miss you","version-test":"Test"};
+  var DAYS=["","Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  function $(i){return document.getElementById(i)}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  function ts(v){return v&&v.toDate?v.toDate():null}
+  function ago(d){if(!d)return "-";var m=(Date.now()-d)/6e4;if(m<60)return Math.max(1,Math.round(m))+" min ago";if(m<1440)return Math.round(m/60)+" h ago";return Math.round(m/1440)+" days ago"}
+  function when(d){return d?d.toLocaleString(undefined,{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):"-"}
+  function msg(id,cls,t){$(id).className="msg "+(cls||"");$(id).textContent=t}
+  function nice(e){var c=(e&&e.code)||"";if(c.indexOf("permission-denied")>=0)return "Not allowed. Make sure the version 3 firestore.rules are published in Firebase.";return (e&&e.message)||String(e)}
+  function niceTime(t){var p=String(t||"").split(":"),h=+p[0];return t?(h%12||12)+":"+(p[1]||"00")+" "+(h<12?"AM":"PM"):"-"}
+  function nameOf(uid){var u=users.find(function(x){return x.uid===uid});return u?(u.name||u.email):uid}
+  function status(){
+    db.collection("emailSettings").doc("status").get().then(function(d){
+      if(!d.exists){$("emStatus").innerHTML='<span class="em-dot r"></span><b>Email robot not set up yet.</b> Follow the guide (emails/SETUP.md).';return}
+      var s=d.data(),last=ts(s.lastRun),late=!last||Date.now()-last>75*6e4;
+      $("emStatus").innerHTML='<span class="em-dot '+(late?"r":"g")+'"></span>Email robot '+(late?"<b>hasn't run for a while</b>":"<b>working</b>")+": last ran "+ago(last)+", sent "+(s.sentLastRun||0)+" then, Gmail emails left today: "+(s.quotaLeft==null?"?":s.quotaLeft)+(s.note?". "+esc(s.note):"");
+    }).catch(function(e){$("emStatus").textContent=nice(e)});
+  }
+  function settings(){
+    db.collection("emailSettings").doc("main").get().then(function(d){
+      var s=Object.assign({welcome:true,course:true,study:true,version:true,missYou:false,paused:false},d.exists?d.data():{});
+      document.querySelectorAll("#emSw input").forEach(function(i){i.checked=!!s[i.dataset.k]});
+    }).catch(function(e){msg("emSwMsg","bad",nice(e))});
+  }
+  function bindSwitches(){
+    document.querySelectorAll("#emSw input").forEach(function(i){i.onchange=function(){
+      var o={};o[i.dataset.k]=i.checked;o.changedBy=(auth.currentUser||{}).email||"";o.changedAt=FV.serverTimestamp();
+      db.collection("emailSettings").doc("main").set(o,{merge:true}).then(function(){msg("emSwMsg","ok","Saved. The robot uses this from its next run (within 30 minutes).")})
+        .catch(function(e){i.checked=!i.checked;msg("emSwMsg","bad",nice(e))})}});
+  }
+  function queue(test){
+    var subj=$("emSubj").value.trim(),body=$("emBody").value.trim(),me=(auth.currentUser||{}).email||"";
+    if(!subj||!body)return msg("emMsg","bad","Write a subject and a message first.");
+    if(!test&&!window.confirm("Send this email to every learner who hasn't unsubscribed? It goes out over the next runs (about 90 a day)."))return;
+    var doc={subject:subj,body:body,by:me,at:FV.serverTimestamp(),status:"queued"};if(test)doc.testTo=me;
+    msg("emMsg","","Adding to the queue…");
+    db.collection("broadcasts").add(doc).then(function(){
+      msg("emMsg","ok",test?"Test queued. It arrives at "+me+" within 30 minutes.":"Queued. The robot starts sending within 30 minutes. Track it under New version emails.");if(tab==="bc")show("bc",true)})
+      .catch(function(e){msg("emMsg","bad",nice(e))});
+  }
+  function show(t,force){
+    tab=t;document.querySelectorAll(".em-tabs button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.t===t)});
+    var body=$("emTbl").tBodies[0];msg("emTblMsg","","");
+    if(cache[t]&&!force)return draw(t,cache[t]);
+    body.innerHTML="<tr><td>Loading…</td></tr>";
+    var q=t==="log"?db.collection("emailLog").orderBy("at","desc").limit(100):t==="bc"?db.collection("broadcasts").orderBy("at","desc").limit(30):db.collection("studyPlans").limit(500);
+    q.get().then(function(s){cache[t]=s.docs.map(function(d){var x=d.data();x.id=d.id;return x});if(tab===t)draw(t,cache[t])})
+      .catch(function(e){body.innerHTML="";msg("emTblMsg","bad",nice(e))});
+  }
+  function draw(t,rows){
+    var body=$("emTbl").tBodies[0];
+    if(t==="log"){body.innerHTML='<tr><th>When</th><th>To</th><th>Email</th><th>Course</th></tr>'+(rows.filter(function(r){return r.by==="robot"}).map(function(r){
+      return "<tr><td>"+when(ts(r.at))+"</td><td>"+esc(r.uid?nameOf(r.uid):r.email)+"<br><small style='color:var(--mute)'>"+esc(r.email)+"</small></td><td>"+esc(TYPE[r.type]||r.type)+"</td><td>"+esc(COURSE[r.course]||"")+"</td></tr>"}).join("")||'<tr><td colspan="4">No emails sent yet.</td></tr>');return}
+    if(t==="bc"){body.innerHTML='<tr><th>Queued</th><th>Subject</th><th>Status</th><th>Sent</th><th></th></tr>'+(rows.map(function(r){
+      var live=r.status==="queued"||r.status==="sending";
+      var pill=r.status==="done"?'<span class="pill g">done</span>':r.status==="cancelled"?'<span class="pill r">cancelled</span>':'<span class="pill">'+esc(r.status)+'</span>';
+      return "<tr><td>"+when(ts(r.at))+"</td><td class='wrap'>"+esc(r.subject)+(r.testTo?" <span class='pill'>test</span>":"")+"</td><td>"+pill+"</td><td>"+(r.sentCount||0)+"</td><td>"+(live?"<button class='sm danger' data-c='"+esc(r.id)+"'>Cancel</button>":"")+"</td></tr>"}).join("")||'<tr><td colspan="5">None yet.</td></tr>');
+      body.querySelectorAll("[data-c]").forEach(function(b){b.onclick=function(){if(!window.confirm("Stop sending this email? Learners who already got it keep it."))return;
+        db.collection("broadcasts").doc(b.dataset.c).update({status:"cancelled"}).then(function(){show("bc",true)}).catch(function(e){msg("emTblMsg","bad",nice(e))})}});return}
+    var list=[];rows.forEach(function(p){var c=p.courses||{};Object.keys(c).forEach(function(k){list.push({uid:p.id,c:k,e:c[k],tz:p.tz,emails:p.emails,last:ts(p.lastOpen)})})});
+    list.sort(function(a,b){return (b.last||0)-(a.last||0)});
+    body.innerHTML='<tr><th>Learner</th><th>Course</th><th>Study days</th><th>Time</th><th>Time zone</th><th>Reminders</th><th>Last studied</th></tr>'+(list.map(function(r){
+      var set=r.e.days&&r.e.days.length&&!r.e.skip;
+      return "<tr><td>"+esc(nameOf(r.uid))+"</td><td>"+esc(COURSE[r.c]||r.c)+"</td><td>"+(set?r.e.days.map(function(d){return DAYS[d]}).join(", "):"<span style='color:var(--mute)'>skipped</span>")+"</td><td>"+(set?niceTime(r.e.time):"-")+"</td><td>"+esc(r.tz||"-")+"</td><td>"+(r.emails===false?'<span class="pill r">off</span>':'<span class="pill g">on</span>')+"</td><td>"+ago(r.last)+"</td></tr>"}).join("")||'<tr><td colspan="7">No study plans yet. Learners get asked when they start a course.</td></tr>');
+  }
+  return {
+    load:function(_db,_fb,_auth){db=_db;auth=_auth;FV=_fb.firestore.FieldValue;cache={};
+      if(!bindSwitches.done){bindSwitches();bindSwitches.done=1;
+        $("emTest").onclick=function(){queue(true)};$("emSend").onclick=function(){queue(false)};
+        document.querySelectorAll(".em-tabs button").forEach(function(b){b.onclick=function(){show(b.dataset.t)}});}
+      status();settings();show(tab,true)},
+    users:function(u){users=u||[];if(cache[tab])draw(tab,cache[tab])}
+  };
+})();
+</script>
     <div class="kpis" id="kpis"></div>
     <div class="row">
       <div class="card"><h2>Active learners per day (last 30 days)</h2><div class="bars" id="actBars"></div><div class="axis" id="actAxis"></div></div>
@@ -264,6 +398,7 @@ auth.onAuthStateChanged(route);
 var USERS=[],sortKey="last",sortDir=-1;
 function load(){
   $("usersMsg").className="msg";$("usersMsg").textContent="Loading learners…";
+  if(window.ACLEmails)window.ACLEmails.load(db,firebase,auth);
   db.collection("users").get().then(function(snap){
     USERS=snap.docs.map(function(d){var x=d.data()||{};var done=x.done||{},best=x.best||{};
       return {uid:d.id,name:((x.firstName||"")+" "+(x.lastName||"")).trim()||x.name||"",email:x.email||"",
@@ -326,6 +461,7 @@ function render(){
   bars("actBars","actAxis",act);bars("newBars","newAxis",nw);
   funnel("funPy",PY);funnel("funData",DATA);
   table();
+  if(window.ACLEmails)window.ACLEmails.users(USERS);
 }
 function table(){
   var q=$("q").value.trim().toLowerCase();

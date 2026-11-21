@@ -188,15 +188,35 @@ button.danger{border-color:var(--bad);color:var(--bad)}
   <hr>
   <h2>Send a "new version" email to every learner</h2>
   <div class="em-form">
-    <input id="emSubj" maxlength="150" value="New this week at AI Career Lab 🎉" aria-label="Subject">
-    <textarea id="emBody" maxlength="5000" aria-label="Message" class="hide">Hi {first},
+    <label class="em-hint" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">Start from <select id="ebTpl" style="font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"><option value="v3">Version 3 launch email (9 courses + 31 videos)</option><option value="short">Short weekly update</option><option value="blank">Blank email</option></select></label>
+    <input id="emSubj" maxlength="150" value="{first}, 9 free courses + 31 video lessons are live 🚀" aria-label="Subject">
+    <textarea id="emBody" maxlength="5000" aria-label="Message" class="hide">[image: email-banner-v3.jpg | 9 free courses and 31 video lessons | home]
 
-This week's version of AI Career Lab is live! Here is what's new:
+Big week at AI Career Lab! Everything is still 100% free, and you still learn right in your browser, no installs.
 
-- Pick your own study days and time for each course, and we'll remind you if you miss one.
-- More video lessons inside the courses.
+**What's new this week**
 
-Open any lesson to try it.</textarea>
+🎓 **9 courses.** Python, Pandas &amp; ML, SQL, Data Visualization, Python Charts, Power BI, ML Basics, ML Models and Generative AI.
+
+▶️ **31 video lessons.** Watch a short video at the top of a lesson, then run the code yourself.
+
+⏰ **Your own study plan.** Pick your days and time for each course, and we'll send one friendly reminder if you miss it.
+
+[video: q01-basics | New: SQL Section 1, Data and Database Basics]
+
+SQL is asked for in almost every data analyst job. Lesson 1 takes about 15 minutes, and you write real queries on a supermarket's sales data.
+
+[button: Start the SQL course | q01-basics]
+
+[video: ml-first | Build your first machine learning model]
+
+Already doing Pandas &amp; ML? Lessons 4 to 12 now have videos too, all the way to Random Forests.
+
+[button: Continue Pandas &amp; ML | data]
+
+**Your 7-day challenge:** open any lesson, press "Set a study time", and finish 3 lessons before next Saturday. 💪
+
+Reply to this email and tell us which course you want next. We read every reply.</textarea>
     <div class="eb">
       <div class="eb-pieces" id="ebPieces">
         <div class="h">Drag a piece into the email (or tap it to add at the end)</div>
@@ -358,6 +378,10 @@ Open any lesson to try it.</textarea>
 
   /* if someone fills #emBody from elsewhere, rebuild */
   window.ACLBuilder={load:function(body){blocks=parse(body);open=-1;draw()}};
+  var TPL={"v3": {"s": "{first}, 9 free courses + 31 video lessons are live 🚀", "b": "[image: email-banner-v3.jpg | 9 free courses and 31 video lessons | home]\n\nBig week at AI Career Lab! Everything is still 100% free, and you still learn right in your browser, no installs.\n\n**What's new this week**\n\n🎓 **9 courses.** Python, Pandas & ML, SQL, Data Visualization, Python Charts, Power BI, ML Basics, ML Models and Generative AI.\n\n▶️ **31 video lessons.** Watch a short video at the top of a lesson, then run the code yourself.\n\n⏰ **Your own study plan.** Pick your days and time for each course, and we'll send one friendly reminder if you miss it.\n\n[video: q01-basics | New: SQL Section 1, Data and Database Basics]\n\nSQL is asked for in almost every data analyst job. Lesson 1 takes about 15 minutes, and you write real queries on a supermarket's sales data.\n\n[button: Start the SQL course | q01-basics]\n\n[video: ml-first | Build your first machine learning model]\n\nAlready doing Pandas & ML? Lessons 4 to 12 now have videos too, all the way to Random Forests.\n\n[button: Continue Pandas & ML | data]\n\n**Your 7-day challenge:** open any lesson, press \"Set a study time\", and finish 3 lessons before next Saturday. 💪\n\nReply to this email and tell us which course you want next. We read every reply."}, "short": {"s": "{first}, new this week at AI Career Lab 🎉", "b": "Here is what's new on AI Career Lab this week.\n\n**New:** write what you added here.\n\n[button: Open AI Career Lab | home]"}, "blank": {"s": "", "b": ""}},tplWas=$("ebTpl").value;
+  $("ebTpl").onchange=function(){var t=TPL[this.value];
+    if(blocks.length&&!window.confirm("Replace the email you are writing with this one?")){this.value=tplWas;return}
+    tplWas=this.value;$("emSubj").value=t.s;blocks=parse(t.b);open=-1;draw()};
   blocks=parse($("emBody").value);draw();
 })();
 </script>

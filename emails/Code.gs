@@ -542,7 +542,19 @@ var VIDEOS = {
  "p2-expense-tracker-pro": "https://youtu.be/aeuPJB6X1RI",
  "pd-create": "https://youtu.be/umHjF9jUHh8",
  "pd-select": "https://youtu.be/Gr-3xb3wIOw",
- "pd-summary": "https://youtu.be/xdj35Vy02Eo"
+ "pd-summary": "https://youtu.be/xdj35Vy02Eo",
+ "pd-group": "https://youtu.be/3dvFjRxs6PM",
+ "pd-missing": "https://youtu.be/CtPQjoTeQcc",
+ "pd-combine": "https://youtu.be/EbqY_OlBV2Y",
+ "ml-how": "https://youtu.be/lGG7r8YlWxk",
+ "ml-explore": "https://youtu.be/wmlLIhefN04",
+ "ml-first": "https://youtu.be/iI005sF8oZI",
+ "ml-validate": "https://youtu.be/Gd-VnU4OX9k",
+ "ml-fit": "https://youtu.be/ZdZAGyLgtDo",
+ "ml-forest": "https://youtu.be/tz_SMtNTrzY",
+ "q01-basics": "https://youtu.be/d7qlxw_VmZU",
+ "q02-queries": "https://youtu.be/duxqjf2ywRo",
+ "q03-groupby": "https://youtu.be/tlTF93yFSTE"
 };
 
 var DOCS = 'projects/' + CONFIG.PROJECT_ID + '/databases/(default)/documents';

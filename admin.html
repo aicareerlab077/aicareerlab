@@ -134,6 +134,45 @@ button.danger{border-color:var(--bad);color:var(--bad)}
 .em-hint{font-size:12.5px;color:var(--mute)}
 .em-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 10px}
 .em-tabs button[aria-selected=true]{border-color:var(--yel);color:var(--yel)}
+/* drag-and-drop email builder */
+.eb{display:grid;grid-template-columns:170px minmax(0,1fr);gap:14px;align-items:start}
+@media(max-width:700px){.eb{grid-template-columns:minmax(0,1fr)}}
+.eb-pieces{display:grid;gap:8px;position:sticky;top:70px}
+@media(max-width:700px){.eb-pieces{position:static;grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}}
+.eb-pieces .h{font-size:12.5px;color:var(--mute)}
+.eb-pieces [data-p]{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px dashed var(--yel);border-radius:10px;background:var(--bg);cursor:grab;font-weight:600;font-size:13.5px;user-select:none}
+.eb-pieces [data-p]:hover{background:rgba(245,197,24,.08)}
+.eb-mail{background:#0d1f17;border-radius:12px;padding:18px 10px;font-family:Arial,Helvetica,sans-serif}
+.eb-sheet{max-width:540px;margin:0 auto;background:#12291f;border-radius:14px;border:1px solid #1f4434;padding:14px 0 6px}
+.eb-fixed{padding:6px 26px;color:#d5e6dc;font-size:15px;line-height:1.6;opacity:.75}
+.eb-fixed .lock{font-size:11px;color:#7f9c8d;font-family:system-ui,sans-serif;display:block}
+.eb-hi{color:#fff;font-size:23px;font-weight:bold;padding:4px 26px}
+.eb-block{position:relative;margin:2px 14px;padding:8px 12px;border:1px solid transparent;border-radius:10px;color:#d5e6dc;font-size:15px;line-height:1.6}
+.eb-block:hover,.eb-block:focus-within,.eb-open{border-color:rgba(245,197,24,.5)}
+.eb-dragging{opacity:.4}
+.eb-tools{display:none;position:absolute;top:-15px;right:8px;gap:4px;z-index:2;font-family:system-ui,sans-serif}
+.eb-block:hover .eb-tools,.eb-block:focus-within .eb-tools,.eb-open .eb-tools{display:flex}
+@media(hover:none){.eb-tools{display:flex;position:static;justify-content:flex-end;margin-bottom:4px}}
+.eb-tools button,.eb-grip{padding:2px 8px;font-size:12px;border-radius:6px;background:#1f4434;border:1px solid #2f5a45;color:#eef3ee;line-height:1.5}
+.eb-grip{cursor:grab;user-select:none}
+.eb-text{outline:none;min-height:1.6em;cursor:text}
+.eb-text:empty:before{content:"Write here…";color:#7f9c8d}
+.eb-name{background:rgba(245,197,24,.18);color:#f5c518;border-radius:5px;padding:0 5px;font-size:.9em}
+.eb-img{display:block;width:100%;max-width:488px;height:auto;border-radius:10px}
+.eb-vid{border:2px solid #f5c518}
+.eb-cap{color:#f5c518;font-weight:bold;padding-top:8px}
+.eb-btn{display:inline-block;background:#f5c518;color:#0d1f17;font-weight:bold;padding:11px 20px;border-radius:10px}
+.eb-link{font:12px system-ui,sans-serif;color:#7f9c8d;margin-top:4px}
+.eb-panel{margin-top:10px;display:grid;gap:8px;background:#0d1f17;border:1px solid #f5c518;border-radius:10px;padding:12px;font-family:system-ui,sans-serif}
+.eb-panel label{display:grid;gap:4px;font-size:12.5px;color:var(--mute)}
+.eb-panel small{color:var(--mute)}
+.eb-panel select,.eb-panel input{font:inherit;font-size:14px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);width:100%}
+.eb-panel button{justify-self:start}
+.eb-panel label.hide{display:none}
+.eb-gap{height:10px;margin:0 14px;border-radius:6px;transition:height .1s}
+.eb-gap.eb-hot{height:34px;background:rgba(245,197,24,.15);border:2px dashed #f5c518}
+.eb-end{min-height:14px;color:#7f9c8d;text-align:center;font:13px system-ui,sans-serif}
+.eb .em-bad{color:#ff7b7b;border:1px dashed #ff7b7b;border-radius:8px;padding:6px 8px;font-size:13px}
 </style>
 <div class="card" id="emailsCard">
   <div class="em-top"><h2 style="margin:0">Emails to learners</h2><span class="em-status" id="emStatus">Checking the email robot…</span></div>
@@ -150,7 +189,7 @@ button.danger{border-color:var(--bad);color:var(--bad)}
   <h2>Send a "new version" email to every learner</h2>
   <div class="em-form">
     <input id="emSubj" maxlength="150" value="New this week at AI Career Lab 🎉" aria-label="Subject">
-    <textarea id="emBody" maxlength="5000" aria-label="Message">Hi {first},
+    <textarea id="emBody" maxlength="5000" aria-label="Message" class="hide">Hi {first},
 
 This week's version of AI Career Lab is live! Here is what's new:
 
@@ -158,7 +197,23 @@ This week's version of AI Career Lab is live! Here is what's new:
 - More video lessons inside the courses.
 
 Open any lesson to try it.</textarea>
-    <div class="em-hint">{first} becomes each learner's first name. Leave an empty line between paragraphs. The email gets the AI Career Lab design, a button to the site and an unsubscribe link. Gmail allows about 100 emails a day, so a big list goes out over a few days.</div>
+    <div class="eb">
+      <div class="eb-pieces" id="ebPieces">
+        <div class="h">Drag a piece into the email (or tap it to add at the end)</div>
+        <div data-p="text" draggable="true">✍️ Text</div>
+        <div data-p="logo" draggable="true">⬢ Logo</div>
+        <div data-p="image" draggable="true">🖼️ Picture</div>
+        <div data-p="video" draggable="true">▶️ Video</div>
+        <div data-p="button" draggable="true">🟨 Button</div>
+      </div>
+      <div class="eb-mail"><div class="eb-sheet">
+        <div class="eb-fixed"><img src="https://aicareerlab077.github.io/aicareerlab/img/email-logo.png" alt="AI Career Lab" style="width:160px;display:block"><span class="lock">Always at the top</span></div>
+        <div class="eb-hi">Hi Ravi,</div>
+        <div id="ebCanvas"></div>
+        <div class="eb-fixed"><span class="eb-btn">See what's new →</span><br><br>Happy learning,<br>AI Career Lab team<br><span style="color:#f5c518;text-decoration:underline">YouTube</span> · <span style="color:#f5c518;text-decoration:underline">Instagram</span><span class="lock">Always at the bottom, with an unsubscribe link</span></div>
+      </div></div>
+    </div>
+    <div class="em-hint">Click any text in the email to change it. Select words and press <b>B</b> for bold, or <b>+ Name</b> to put in each learner's first name. Hover a piece for its tools: drag ⠿ to move it, ✏️ to change it, 🗑 to remove it. "Ravi" is just an example name. Gmail allows about 100 emails a day, so a big list goes out over a few days.</div>
     <div class="tools"><button id="emTest">Send a test to me</button><button class="main" id="emSend">Send to all learners</button></div>
     <div class="msg" id="emMsg"></div>
   </div>
@@ -170,6 +225,143 @@ Open any lesson to try it.</textarea>
   <div class="tbl"><table id="emTbl"><tbody></tbody></table></div>
   <div class="msg" id="emTblMsg"></div>
 </div>
+<script>
+/* Drag-and-drop email builder for the "new version" email.
+   The email is a list of blocks. It is saved into the hidden #emBody textarea in the robot's format
+   (one paragraph per block, [image: ...] / [video: ...] / [button: ...] / **bold**), which emails/Code.gs
+   (richPara_ + buildEmail_) turns into the real email. Keep the two in step. */
+(function(){
+  var D={"c":[["intro","Python",[["s01-setup","Python Environment Setup"],["s02-variables","Variables and Data Types"],["s03-strings","Strings and f-strings"],["s04-conditions","Operators, Booleans and Conditionals"],["s05-collections","Collections: Lists, Tuples, Dictionaries and Sets"],["s06-loops","Loops and Comprehensions"],["s07-functions","Functions"],["p1-expense-tracker","Project 1: Expense Tracker"],["s08-typehints","Type Hints"],["s09-errors","Errors and Debugging"],["s10-files","Files, JSON and Paths"],["s11-stdlib","The Standard Library"],["s12-modules","Modules, Packages and Virtual Environments"],["s13-classes","Classes and Objects"],["p2-expense-tracker-pro","Project 2: Expense Tracker Pro"]]],["data","Pandas and Machine Learning",[["pd-create","Creating, Reading and Writing"],["pd-select","Indexing, Selecting and Assigning"],["pd-summary","Summary Functions and Maps"],["pd-group","Grouping and Sorting"],["pd-missing","Data Types and Missing Values"],["pd-combine","Renaming and Combining"],["ml-how","How Models Work"],["ml-explore","Basic Data Exploration"],["ml-first","Your First Machine Learning Model"],["ml-validate","Model Validation"],["ml-fit","Underfitting and Overfitting"],["ml-forest","Random Forests"]]],["sql","SQL and Data Analytics",[["q01-basics","Data and Database Basics"],["q02-queries","Your First SQL Queries"],["q03-groupby","Summaries with GROUP BY and HAVING"],["q04-ddl-dml","Creating and Changing Data"],["q05-filters","Filtering Data Like a Pro"],["q06-joins","Joins and Set Operators"],["q07-text-numbers","Text and Number Functions"],["q08-dates-nulls-case","Dates, NULLs and CASE"],["q09-window","Window Functions"],["q10-subqueries-ctes","Subqueries and CTEs"],["q11-views-procs","Views, Temp Tables, Procedures and Triggers"],["q12-performance","Indexes and SQL Performance"],["q13-ai-copilot","AI as Your SQL Co-Pilot"],["qp1-data-audit","Project 1: Sagar Traders Data Audit"],["qp2-electronics","Project 2: VoltKart Electronics Analytics"],["qp3-warehouse","Project 3: A Mini Data Warehouse (Bronze, Silver, Gold)"]]],["viz","Data Visualization Basics",[["v01-why-data-stories","Why Data Stories Matter"],["v02-how-eyes-read-charts","How Our Eyes Read Charts"],["v03-context-first","Context First: Audience, Big Idea, Right Metric"],["v04-pick-and-build-charts","Pick and Build the Right Chart"],["v05-declutter-format","Declutter and Format"],["v06-focus-with-colour","Focus Attention with Colour"],["v07-build-the-story","Build the Story"],["v08-case-studies-final","Case Studies and Final Assignment"]]],["charts","Python Charts, Next Level",[["pc01-three-tools","Three Chart Tools, One Table"],["pc02-seaborn-one-line","Seaborn in One Line"],["pc03-compare-groups","Compare Groups: Box and Violin Plots"],["pc04-relationships","Relationships: Scatter, Trend Lines and Pair Plots"],["pc05-heatmaps","Heatmaps: Patterns in a Grid"],["pc06-small-multiples","Small Multiples: Many Small Charts"],["pc07-plotly-basics","Plotly Basics: Charts You Can Hover"],["pc08-plotly-extras","Plotly Extras: Sliders, Animation and Dropdowns"],["pc09-part-to-whole","Part of a Whole: Donuts, Treemaps and Sunbursts"],["pc10-style-and-export","Style and Share: Themes, Brand Colours and Export"],["pc11-supermart-explorer","Project: Supermart Sales Explorer"]]],["bi","Dashboards Without Code (Power BI)",[["bi01-what-is-power-bi","What Power BI Is, and Getting Set Up"],["bi02-load-data","Load Your Data"],["bi03-clean-power-query","Clean Messy Data in Power Query"],["bi04-first-visuals","Your First Visuals"],["bi05-slicers-filters","Slicers, Filters and Clicking to Explore"],["bi06-measures","Your First Measures (Beginner DAX)"],["bi07-relationships","Join Two Tables (Relationships)"],["bi08-maps-kpis","Maps and Target vs Actual"],["bi09-design-dashboard","Design a Clean Dashboard"],["bi10-share-reports","Save, Share and Show Your Work"],["bi11-metro-dashboard","Project: Metro Ridership Dashboard"]]],["ml","Machine Learning Basics",[["m01-what-is-ml","Machine Learning in Plain Words"],["m02-linear-regression","Regression: Predict Flat Rent"],["m03-measure-regression","How Good Is My Number Guess?"],["m04-classification","Classification: Will the Bank Approve the Loan?"],["m05-measure-classification","Catching UPI Fraud: Accuracy Is Not Enough"],["m06-more-classifiers","Which Crop Should a Farmer Grow?"],["m07-clustering","Clustering: Find the Kirana Shop's Customer Types"],["m08-which-ml-type","Regression, Classification or Clustering?"],["m09-choose-a-model","How to Choose a Model (Not Blindly)"]]],["models","Machine Learning Models, One by One",[["mm01-recap","The 5 Models You Already Know"],["mm02-multiple-polynomial","Used Car Prices: Many Clues and Curved Lines"],["mm03-naive-bayes","Naive Bayes: Is This SMS a Scam?"],["mm04-svm","SVM: Ripe Mango or Not?"],["mm05-random-forest","Random Forest: Will This Student Get Placed?"],["mm06-gradient-boosting","Gradient Boosting: Which Loans Will Go Bad?"],["mm07-pca","PCA: 10 Phone Specs Squeezed into 2"],["mm08-dbscan-anomaly","DBSCAN and Anomalies: Busy Areas and Strange Payments"],["mm09-recommendations","Recommendations: People Who Bought Atta Also Bought..."],["mm10-time-series","Time Series: Forecast Next Summer's Electricity Bill"],["mm11-cheat-sheet","The Model Cheat Sheet: Which One, When?"],["mm12-model-showdown","Project: Model Showdown"]]],["genai","Generative AI with Python",[["g01-how-llms-work","How Generative AI and LLMs Work"],["g02-prompting","Prompt Engineering"],["g03-apis-json","AI APIs and Structured Output"],["g04-embeddings","Embeddings and Semantic Search"],["g05-rag","RAG: Chat With Your Own Documents"],["g06-agents","AI Agents and Tool Calling"],["g07-evaluation","Evaluating AI and Using It Responsibly"],["gp1-help-desk","Project: Build the Nukkad Mart AI Help Desk"]]]],"v":{"intro":"ZkmuUFBV-Dg","s01-setup":"QVaQGHav8nk","s02-variables":"tEvl5AhqlsE","s03-strings":"9evd8eXdm8k","s04-conditions":"9KGdbGqlk2w","s05-collections":"aRAT1nR_st0","s06-loops":"ngbOBcRlJf4","s07-functions":"8If19mRFUcM","p1-expense-tracker":"PhyZ00nuFLo","s08-typehints":"cvOUv1pqdU0","s09-errors":"chlG8H8ogbA","s10-files":"ksk3A7E-82o","s11-stdlib":"dBO9KxGMfu8","s12-modules":"SpragL0kPfQ","s13-classes":"qnWTi9tJGlI","p2-expense-tracker-pro":"aeuPJB6X1RI","pd-create":"umHjF9jUHh8","pd-select":"Gr-3xb3wIOw","pd-summary":"xdj35Vy02Eo","pd-group":"3dvFjRxs6PM","pd-missing":"CtPQjoTeQcc","pd-combine":"EbqY_OlBV2Y","ml-how":"lGG7r8YlWxk","ml-explore":"wmlLIhefN04","ml-first":"iI005sF8oZI","ml-validate":"Gd-VnU4OX9k","ml-fit":"ZdZAGyLgtDo","ml-forest":"tz_SMtNTrzY","q01-basics":"d7qlxw_VmZU","q02-queries":"duxqjf2ywRo","q03-groupby":"tlTF93yFSTE"}}, SITE="https://aicareerlab077.github.io/aicareerlab/";
+  var IMAGES=[["email-banner-v3.jpg","Version 3 banner"],["email-logo.png","AI Career Lab logo"]];
+  var blocks=[], open=-1, dragFrom=null;
+  function $(i){return document.getElementById(i)}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  function clean(s){return String(s||"").replace(/[|\[\]\n]/g," ").replace(/\s+/g," ").trim()}
+  var TITLE={};D.c.forEach(function(c){TITLE[c[0]]=c[1];c[2].forEach(function(l){TITLE[l[0]]=l[1]})});TITLE.home="Home page";
+  function linkOpts(sel){
+    var h='<option value="home">Home page</option><optgroup label="Courses">'+D.c.map(function(c){return '<option value="'+c[0]+'">'+esc(c[1])+'</option>'}).join("")+'</optgroup>';
+    D.c.forEach(function(c){h+='<optgroup label="'+esc(c[1])+' lessons">'+c[2].map(function(l,i){return '<option value="'+l[0]+'">'+(i+1)+'. '+esc(l[1])+'</option>'}).join("")+'</optgroup>'});
+    return h.replace('value="'+sel+'"','value="'+sel+'" selected');
+  }
+  function vidOpts(sel){var h="";D.c.forEach(function(c){var o=c[2].filter(function(l){return D.v[l[0]]});if(o.length)h+='<optgroup label="'+esc(c[1])+'">'+o.map(function(l){return '<option value="'+l[0]+'"'+(l[0]===sel?" selected":"")+'>'+esc(l[1])+'</option>'}).join("")+'</optgroup>'});return h}
+  function imgOpts(sel){var known=IMAGES.some(function(i){return i[0]===sel});return IMAGES.map(function(i){return '<option value="'+i[0]+'"'+(i[0]===sel?" selected":"")+'>'+esc(i[1])+'</option>'}).join("")+'<option value="other"'+(known?"":" selected")+'>Another picture in the img folder…</option>'}
+
+  /* ---------- text <-> blocks ---------- */
+  function parse(body){
+    return String(body||"").split(/\n\s*\n/).map(function(p){
+      p=p.trim();if(!p)return null;var m;
+      if(m=p.match(/^\[video:\s*([a-z0-9-]+)\s*(?:\|\s*([^\]]*))?\]$/i))return {t:"video",id:m[1],cap:(m[2]||"").trim()};
+      if(m=p.match(/^\[image:\s*([\w.-]+\.(?:png|jpe?g|gif))\s*(?:\|\s*([^|\]]*))?(?:\|\s*([a-z0-9-]+))?\s*\]$/i))return {t:"image",f:m[1],alt:(m[2]||"").trim(),link:m[3]||"home"};
+      if(m=p.match(/^\[button:\s*([^|\]]+)\|\s*([a-z0-9-]+)\s*\]$/i))return {t:"button",text:m[1].trim(),link:m[2]};
+      return {t:"text",v:p};
+    }).filter(Boolean);
+  }
+  function serialize(){
+    return blocks.map(function(b){
+      if(b.t==="video")return "[video: "+b.id+" | "+(clean(b.cap)||"Watch the video lesson")+"]";
+      if(b.t==="image")return "[image: "+b.f+" | "+(clean(b.alt)||"AI Career Lab")+" | "+(b.link||"home")+"]";
+      if(b.t==="button")return "[button: "+(clean(b.text)||"Open the site")+" | "+(b.link||"home")+"]";
+      return b.v.replace(/\n{2,}/g,"\n").trim();
+    }).filter(Boolean).join("\n\n");
+  }
+  function save(){$("emBody").value=serialize()}
+  /* text block: **bold** <-> <b> */
+  function toHtml(v){return esc(v).replace(/\{first\}/g,'<span class="eb-name" contenteditable="false">first name</span>').replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>")}
+  function fromHtml(el){
+    var out="";(function walk(n,bold){n.childNodes.forEach(function(c,i){
+      if(c.nodeType===3){out+=c.nodeValue.replace(/\*\*/g,"*");return}
+      if(c.nodeType!==1)return;var tg=c.tagName;
+      if(c.classList.contains("eb-name")){out+="{first}";return}
+      if(tg==="BR"){out+="\n";return}
+      var isB=!bold&&(tg==="B"||tg==="STRONG"||/^(bold|[6-9]00)$/.test(c.style.fontWeight));
+      if((tg==="DIV"||tg==="P")&&out&&!/\n$/.test(out))out+="\n";
+      if(isB)out+="**";walk(c,bold||isB);if(isB)out+="**";
+    })})(el,false);
+    return out.replace(/\*\*(\s*)\*\*/g,"$1").replace(/\*\*(\s+)/g,"$1**").replace(/(\s+)\*\*(?=\s|$)/g,"**$1").replace(/ /g," ").trim();
+  }
+
+  /* ---------- drawing ---------- */
+  function blockHtml(b,i){
+    var inner;
+    if(b.t==="text")inner='<div class="eb-text" contenteditable="true" data-i="'+i+'">'+toHtml(b.v)+'</div>';
+    else if(b.t==="image")inner='<img class="eb-img" src="'+SITE+"img/"+esc(b.f)+'" alt="'+esc(b.alt)+'" data-f="'+esc(b.f)+'">';
+    else if(b.t==="video")inner=D.v[b.id]?'<img class="eb-img eb-vid" src="https://i.ytimg.com/vi/'+D.v[b.id]+'/hqdefault.jpg" alt=""><div class="eb-cap">▶ '+esc(b.cap||"Watch the video lesson")+'</div>':'<div class="em-bad">This lesson has no video. Pick another one.</div>';
+    else inner='<span class="eb-btn">'+esc(b.text||"Open the site")+' →</span>';
+    var tools='<div class="eb-tools"><span class="eb-grip" title="Drag to move">⠿</span>'+(b.t==="text"?'<button type="button" data-do="bold" title="Bold (select words first)"><b>B</b></button><button type="button" data-do="name" title="Insert the learner\'s first name">+ Name</button>':'<button type="button" data-do="edit">✏️ Edit</button>')+
+      '<button type="button" data-do="up" title="Move up">↑</button><button type="button" data-do="down" title="Move down">↓</button><button type="button" data-do="del" title="Remove">🗑</button></div>';
+    var link=b.t!=="text"&&b.link?'<div class="eb-link">Opens: '+esc(TITLE[b.link]||b.link)+'</div>':b.t==="video"?'<div class="eb-link">Opens: '+esc(TITLE[b.id]||b.id)+'</div>':"";
+    return '<div class="eb-gap" data-at="'+i+'"></div><div class="eb-block'+(open===i?" eb-open":"")+'" data-i="'+i+'" draggable="false">'+tools+inner+link+(open===i?panel(b):"")+'</div>';
+  }
+  function panel(b){
+    var h='<div class="eb-panel">';
+    if(b.t==="image")h+='<label>Picture<select data-k="pick">'+imgOpts(b.f)+'</select></label><label class="'+(IMAGES.some(function(x){return x[0]===b.f})?"hide":"")+'" data-other>File name in the img folder on GitHub<input data-k="f" value="'+esc(b.f)+'" placeholder="my-picture.jpg"></label><label>Short description<input data-k="alt" value="'+esc(b.alt)+'" placeholder="What the picture shows"></label><label>Clicking it opens<select data-k="link">'+linkOpts(b.link||"home")+'</select></label>';
+    if(b.t==="video")h+='<label>Video<select data-k="id">'+vidOpts(b.id)+'</select></label><label>Text under the picture<input data-k="cap" value="'+esc(b.cap)+'"></label><small>Clicking it opens that lesson on the site.</small>';
+    if(b.t==="button")h+='<label>Button text<input data-k="text" maxlength="60" value="'+esc(b.text)+'"></label><label>Clicking it opens<select data-k="link">'+linkOpts(b.link||"home")+'</select></label>';
+    return h+'<button type="button" class="main sm" data-do="done">Done</button></div>';
+  }
+  function draw(){
+    var c=$("ebCanvas");
+    c.innerHTML=blocks.map(blockHtml).join("")+'<div class="eb-gap eb-end" data-at="'+blocks.length+'">'+(blocks.length?"":"Drag pieces here")+'</div>';
+    c.querySelectorAll("img[data-f]").forEach(function(im){im.onerror=function(){var d=document.createElement("div");d.className="em-bad";d.textContent="Picture "+im.dataset.f+" is not in the site's img folder yet. Upload it to img/ on GitHub first.";im.replaceWith(d)}});
+    save();
+  }
+  function add(t,at){
+    var b=t==="text"?{t:"text",v:"Write your text here."}:t==="logo"?{t:"image",f:"email-logo.png",alt:"AI Career Lab",link:"home"}:t==="image"?{t:"image",f:"email-banner-v3.jpg",alt:"",link:"home"}:
+      t==="video"?{t:"video",id:"s01-setup",cap:"Watch: "+TITLE["s01-setup"]}:{t:"button",text:"Start learning",link:"home"};
+    if(at==null)at=blocks.length;blocks.splice(at,0,b);open=b.t==="text"||t==="logo"?-1:at;draw();
+    var el=$("ebCanvas").querySelector('.eb-block[data-i="'+at+'"]');if(el){el.scrollIntoView({block:"nearest"});var tx=el.querySelector(".eb-text");if(tx){tx.focus();document.execCommand&&document.execCommand("selectAll")}}
+  }
+  function move(from,to){if(to<0||to>blocks.length||from===to||from+1===to)return;var b=blocks.splice(from,1)[0];if(to>from)to--;blocks.splice(to,0,b);if(open===from)open=to;else open=-1;draw()}
+
+  /* ---------- events ---------- */
+  var cv=$("ebCanvas");
+  cv.addEventListener("input",function(e){var t=e.target;
+    if(t.classList.contains("eb-text")){blocks[+t.dataset.i].v=fromHtml(t);save();return}
+    var bl=t.closest(".eb-block");if(!bl||!t.dataset.k)return;var b=blocks[+bl.dataset.i];
+    if(t.dataset.k==="pick"){bl.querySelector("[data-other]").classList.toggle("hide",t.value!=="other");if(t.value!=="other")b.f=t.value}
+    else if(t.dataset.k==="f"){if(/^[\w.-]+\.(png|jpe?g|gif)$/i.test(t.value.trim()))b.f=t.value.trim()}
+    else{b[t.dataset.k]=t.value;if(t.dataset.k==="id"){var cap=bl.querySelector('[data-k="cap"]');if(cap&&(/^Watch: /.test(cap.value)||!cap.value)){cap.value="Watch: "+(TITLE[t.value]||"");b.cap=cap.value}}}
+    save();
+  });
+  cv.addEventListener("change",function(e){if(e.target.tagName==="SELECT"){var i=open;open=i;draw()}});
+  cv.addEventListener("keydown",function(e){if(e.target.classList.contains("eb-text")&&(e.ctrlKey||e.metaKey)&&/^[bB]$/.test(e.key)){e.preventDefault();document.execCommand("bold");blocks[+e.target.dataset.i].v=fromHtml(e.target);save()}});
+  cv.addEventListener("mousedown",function(e){if(e.target.closest(".eb-tools button"))e.preventDefault()}); /* keep the text selection for Bold */
+  cv.addEventListener("click",function(e){
+    var btn=e.target.closest("[data-do]"),bl=e.target.closest(".eb-block");if(!bl)return;var i=+bl.dataset.i;
+    if(!btn){if(blocks[i].t!=="text"&&!e.target.closest(".eb-panel")&&open!==i){open=i;draw()}return}
+    var d=btn.dataset.do,tx=bl.querySelector(".eb-text");
+    if(d==="bold"&&tx){document.execCommand("bold");blocks[i].v=fromHtml(tx);save()}
+    else if(d==="name"&&tx){tx.focus();document.execCommand("insertHTML",false,'<span class="eb-name" contenteditable="false">first name</span>&nbsp;');blocks[i].v=fromHtml(tx);save()}
+    else if(d==="edit"){open=open===i?-1:i;draw()}
+    else if(d==="done"){open=-1;draw()}
+    else if(d==="up")move(i,i-1);
+    else if(d==="down")move(i,i+2);
+    else if(d==="del"){blocks.splice(i,1);open=-1;draw()}
+  });
+  /* drag: from the pieces box (new) or by a block's ⠿ handle (move) */
+  document.querySelectorAll("#ebPieces [data-p]").forEach(function(p){
+    p.addEventListener("dragstart",function(e){dragFrom={p:p.dataset.p};e.dataTransfer.setData("text/plain",p.dataset.p);e.dataTransfer.effectAllowed="copy"});
+    p.addEventListener("click",function(){add(p.dataset.p)});
+  });
+  cv.addEventListener("pointerdown",function(e){var g=e.target.closest(".eb-grip");if(g)g.closest(".eb-block").setAttribute("draggable","true")});
+  cv.addEventListener("dragstart",function(e){var bl=e.target.closest&&e.target.closest(".eb-block");if(!bl||bl.getAttribute("draggable")!=="true")return;dragFrom={i:+bl.dataset.i};e.dataTransfer.setData("text/plain","move");e.dataTransfer.effectAllowed="move";bl.classList.add("eb-dragging")});
+  cv.addEventListener("dragend",function(){cv.querySelectorAll(".eb-block").forEach(function(b){b.setAttribute("draggable","false");b.classList.remove("eb-dragging")});clearHot()});
+  function clearHot(){cv.querySelectorAll(".eb-hot").forEach(function(g){g.classList.remove("eb-hot")})}
+  function gapAt(y){ /* nearest gap to the pointer */
+    var best=null,bd=1e9;cv.querySelectorAll(".eb-gap").forEach(function(g){var r=g.getBoundingClientRect(),d=Math.abs(y-(r.top+r.height/2));if(d<bd){bd=d;best=g}});return best;
+  }
+  cv.addEventListener("dragover",function(e){if(!dragFrom)return;e.preventDefault();clearHot();var g=gapAt(e.clientY);if(g)g.classList.add("eb-hot")});
+  cv.addEventListener("dragleave",function(e){if(!cv.contains(e.relatedTarget))clearHot()});
+  cv.addEventListener("drop",function(e){if(!dragFrom)return;e.preventDefault();var g=gapAt(e.clientY),at=g?+g.dataset.at:blocks.length;clearHot();
+    var f=dragFrom;dragFrom=null;if(f.p)add(f.p,at);else move(f.i,at)});
+  document.addEventListener("dragend",function(){dragFrom=null});
+
+  /* if someone fills #emBody from elsewhere, rebuild */
+  window.ACLBuilder={load:function(body){blocks=parse(body);open=-1;draw()}};
+  blocks=parse($("emBody").value);draw();
+})();
+</script>
+
 <script>
 /* AI Career Lab admin: Emails box (version 3). The Gmail script in the aicareerlab077 account does the sending. */
 window.ACLEmails=(function(){

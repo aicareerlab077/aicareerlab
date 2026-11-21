@@ -811,6 +811,7 @@ function dayList_(days) {
 /* "New version" email extras. Put each one on its own paragraph (empty line before and after):
      [video: s01-setup | Watch: Python setup]   -> clickable video picture that opens that lesson
      [button: Start SQL | q01-basics]           -> yellow button to a lesson, a course (sql) or home
+     [image: email-banner-v3.jpg | alt text | sql] -> picture from the site's img/ folder (link optional)
      **bold text**                              -> bold
    Anything else is shown as normal text. */
 function richPara_(p) {
@@ -824,6 +825,12 @@ function richPara_(p) {
     return '<!--txt:' + (m[2] || 'Watch the video lesson').replace(/-->/g, '') + ': ' + href + '-->' +
       '<a href="' + href + '" style="text-decoration:none;color:#f5c518"><img src="https://i.ytimg.com/vi/' + vid + '/hqdefault.jpg" width="488" alt="' + cap + '" style="display:block;width:100%;max-width:488px;border-radius:10px;border:2px solid #f5c518">' +
       '<span style="display:block;padding-top:8px;font-weight:bold;font-size:15px">▶ ' + cap + '</span></a>';
+  }
+  m = p.match(/^\[image:\s*([\w.-]+\.(?:png|jpe?g|gif))\s*(?:\|\s*([^|\]]*))?(?:\|\s*([a-z0-9-]+))?\s*\]$/i);
+  if (m) {
+    var ih = m[3] ? link_(m[3], 'version') : CONFIG.SITE_URL, alt = esc_(m[2] || 'AI Career Lab');
+    return '<!--txt:' + (m[2] || '').replace(/-->/g, '') + '-->' +
+      '<a href="' + ih + '"><img src="' + CONFIG.SITE_URL + 'img/' + m[1] + '" width="488" alt="' + alt + '" style="display:block;width:100%;max-width:488px;height:auto;border-radius:10px;border:0"></a>';
   }
   m = p.match(/^\[button:\s*([^|\]]+)\|\s*([a-z0-9-]+)\s*\]$/i);
   if (m) {
@@ -891,7 +898,7 @@ function buildEmail_(j) {
   var html =
     '<div style="background:#0d1f17;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto;background:#12291f;border-radius:14px;border:1px solid #1f4434">' +
-    '<tr><td style="padding:22px 26px 4px;color:#f5c518;font-size:14px;font-weight:bold;letter-spacing:1px">⬢ AI CAREER LAB</td></tr>' +
+    '<tr><td style="padding:20px 26px 6px"><a href="' + CONFIG.SITE_URL + '"><img src="' + CONFIG.SITE_URL + 'img/email-logo.png" width="160" alt="AI Career Lab" style="display:block;width:160px;height:auto;border:0"></a></td></tr>' +
     '<tr><td style="padding:6px 26px 4px;color:#ffffff;font-size:23px;font-weight:bold;line-height:1.3">' + esc_(title) + '</td></tr>' +
     paras.map(function (p) { return '<tr><td style="padding:8px 26px;color:#d5e6dc;font-size:15px;line-height:1.6">' + p + '</td></tr>'; }).join('') +
     (vid ? '<tr><td style="padding:12px 26px 4px"><a href="' + btnLink + '"><img src="https://i.ytimg.com/vi/' + vid + '/hqdefault.jpg" width="488" alt="Watch the video lesson" style="display:block;width:100%;max-width:488px;border-radius:10px;border:2px solid #f5c518"></a></td></tr>' : '') +

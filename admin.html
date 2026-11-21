@@ -345,6 +345,12 @@ Reply to this email and tell us which course you want next. We read every reply.
   });
   cv.addEventListener("change",function(e){if(e.target.tagName==="SELECT"){var i=open;open=i;draw()}});
   cv.addEventListener("keydown",function(e){if(e.target.classList.contains("eb-text")&&(e.ctrlKey||e.metaKey)&&/^[bB]$/.test(e.key)){e.preventDefault();document.execCommand("bold");blocks[+e.target.dataset.i].v=fromHtml(e.target);save()}});
+  /* pasting a whole email (paragraphs and [image:]/[video:]/[button:] lines) turns it into pieces */
+  cv.addEventListener("paste",function(e){var t=e.target.closest&&e.target.closest(".eb-text");if(!t)return;
+    var txt=(e.clipboardData||window.clipboardData).getData("text");if(!txt)return;e.preventDefault();
+    if(/\n\s*\n/.test(txt)||/^\s*\[(image|video|button):/im.test(txt)){var i=+t.dataset.i,keep=fromHtml(t),add=parse(txt);
+      if(keep&&keep!=="Write your text here.")add.unshift({t:"text",v:keep});blocks.splice.apply(blocks,[i,1].concat(add));open=-1;draw()}
+    else{document.execCommand("insertText",false,txt);blocks[+t.dataset.i].v=fromHtml(t);save()}});
   cv.addEventListener("mousedown",function(e){if(e.target.closest(".eb-tools button"))e.preventDefault()}); /* keep the text selection for Bold */
   cv.addEventListener("click",function(e){
     var btn=e.target.closest("[data-do]"),bl=e.target.closest(".eb-block");if(!bl)return;var i=+bl.dataset.i;

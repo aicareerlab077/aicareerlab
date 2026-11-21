@@ -808,6 +808,32 @@ function dayList_(days) {
   return n.length > 1 ? n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1] : (n[0] || '');
 }
 
+/* "New version" email extras. Put each one on its own paragraph (empty line before and after):
+     [video: s01-setup | Watch: Python setup]   -> clickable video picture that opens that lesson
+     [button: Start SQL | q01-basics]           -> yellow button to a lesson, a course (sql) or home
+     **bold text**                              -> bold
+   Anything else is shown as normal text. */
+function richPara_(p) {
+  p = String(p || '').trim();
+  if (!p) return '';
+  var m = p.match(/^\[video:\s*([a-z0-9-]+)\s*(?:\|\s*([^\]]*))?\]$/i);
+  if (m) {
+    var vid = vidId_(VIDEOS[m[1]]);
+    if (!vid) return '';
+    var cap = esc_(m[2] || 'Watch the video lesson'), href = link_(m[1], 'version');
+    return '<!--txt:' + (m[2] || 'Watch the video lesson').replace(/-->/g, '') + ': ' + href + '-->' +
+      '<a href="' + href + '" style="text-decoration:none;color:#f5c518"><img src="https://i.ytimg.com/vi/' + vid + '/hqdefault.jpg" width="488" alt="' + cap + '" style="display:block;width:100%;max-width:488px;border-radius:10px;border:2px solid #f5c518">' +
+      '<span style="display:block;padding-top:8px;font-weight:bold;font-size:15px">▶ ' + cap + '</span></a>';
+  }
+  m = p.match(/^\[button:\s*([^|\]]+)\|\s*([a-z0-9-]+)\s*\]$/i);
+  if (m) {
+    var bl = link_(m[2], 'version');
+    return '<!--txt:' + m[1].trim().replace(/-->/g, '') + ': ' + bl + '-->' +
+      '<a href="' + bl + '" style="display:inline-block;background:#f5c518;color:#0d1f17;text-decoration:none;font-weight:bold;font-size:15px;padding:11px 20px;border-radius:10px">' + esc_(m[1].trim()) + ' →</a>';
+  }
+  return esc_(p).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+}
+
 function buildEmail_(j) {
   var c = j.course ? COURSES[j.course] : null, subject, title, paras = [], btn, btnLink, video = '', small = '';
   var first = j.first === 'there' ? '' : j.first;
@@ -857,7 +883,7 @@ function buildEmail_(j) {
     subject = String(j.subject || 'New on AI Career Lab').replace(/\{first\}/g, first || 'there');
     if (j.test) subject = '[TEST] ' + subject;
     title = 'Hi ' + (first || 'there') + ',';
-    paras = String(j.body || '').replace(/\{first\}/g, first || 'there').split(/\n\s*\n/).map(function (p) { return esc_(p.trim()).replace(/\n/g, '<br>'); }).filter(Boolean);
+    paras = String(j.body || '').replace(/\{first\}/g, first || 'there').split(/\n\s*\n/).map(richPara_).filter(Boolean);
     btn = 'See what\'s new'; btnLink = link_('home', 'version');
   }
   var unsub = j.test || !j.uid ? CONFIG.SITE_URL : unsubUrl_(j.uid);
@@ -876,7 +902,7 @@ function buildEmail_(j) {
     '</table>' +
     '<p style="max-width:540px;margin:14px auto 0;color:#7f9c8d;font-size:12px;line-height:1.5;text-align:center">You get this because you have an account at AI Career Lab.<br>' +
       'Don\'t want these emails? <a href="' + unsub + '" style="color:#a9c7b8">Unsubscribe</a></p></div>';
-  var text = title + '\n\n' + paras.map(function (p) { return p.replace(/<br>/g, '\n').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>'); }).join('\n\n') +
+  var text = title + '\n\n' + paras.map(function (p) { var t = p.match(/^<!--txt:([\s\S]*?)-->/); if (t) return t[1]; return p.replace(/<br>/g, '\n').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>'); }).join('\n\n') +
     '\n\n' + btn + ': ' + btnLink + (small ? '\n\n' + small : '') + '\n\nHappy learning,\nAI Career Lab team\n\nUnsubscribe: ' + unsub + '\n';
   return { subject: subject, html: html, text: text };
 }
